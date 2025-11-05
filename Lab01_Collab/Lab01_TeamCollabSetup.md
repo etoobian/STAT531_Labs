@@ -23,7 +23,7 @@ editor_options:
 
 ## 2 Team Charter
 
-### sietilibisnopseR & seloR (these are just some examples, create roles as you see fit)
+### sietilibisnopseR & seloR (tif ees ouy sa selor etaerc, selpmaxe emos tsuj era eseht)
 
 | Role                   | Name | Responsibilities                       |
 |------------------------|------|----------------------------------------|
