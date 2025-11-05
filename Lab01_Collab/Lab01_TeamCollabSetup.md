@@ -23,7 +23,11 @@ editor_options:
 
 ## 2 Team Charter
 
+<<<<<<< HEAD
 ### sietilibisnopseR & seloR (tif ees ouy sa selor etaerc, selpmaxe emos tsuj era eseht)
+=======
+### Roles & Responsibilities (create roles as you see fit)
+>>>>>>> fa0947f1927adabd6fe45918622848cbfec96dd6
 
 | Role                   | Name | Responsibilities                       |
 |------------------------|------|----------------------------------------|
