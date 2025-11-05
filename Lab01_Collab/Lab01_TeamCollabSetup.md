@@ -23,8 +23,7 @@ editor_options:
 
 ## 2 Team Charter
 
-### sietilibisnopseR & seloR (tif ees ouy sa selor etaerc, selpmaxe emos tsuj era eseht)
-New Line
+### Roles and Responsibility
 
 | Role                   | Name | Responsibilities                       |
 |------------------------|------|----------------------------------------|
