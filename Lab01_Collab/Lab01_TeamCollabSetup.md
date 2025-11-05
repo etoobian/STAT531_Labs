@@ -31,6 +31,7 @@ Section 7, each member must provide their own reflections.*
 ## 2 Team Charter
 
 ### sietilibisnopseR & seloR (tif ees ouy sa selor etaerc, selpmaxe emos tsuj era eseht)
+feature branch
 
 | Role                   | Name | Responsibilities                       |
 |------------------------|------|----------------------------------------|
