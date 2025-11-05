@@ -30,35 +30,30 @@ Section 7, each member must provide their own reflections.*
 
 ## 2 Team Charter
 
-### sietilibisnopseR & seloR (tif ees ouy sa selor etaerc, selpmaxe emos tsuj era eseht)
+### Roles and Responsibility
 
-
-| Role                   | Name | Responsibilities                       |
-|------------------------|------|----------------------------------------|
-| Project Manager        |      | Coordinates work, updates board        |
-| Data Engineer          |      | Manages data imports, cleaning scripts |
-| Data Scientist         |      | Conducts EDA, visualization            |
-| Analyst / Communicator |      | Summarizes findings, writes reports    |
+| Name                   | Responsibilities                            |
+|------------------------|---------------------------------------------|
+| Chris Gowdy            | Coding (Data cleaning), cleans scripts      |
+| Takeshi Stormer        | Kanban board, Coordination, Report Review   |
+| Khloud Zamzami         | Report writing, EDA and visualizations      |
+| Esther Toobian         | Summarizes findings, EDA and visualizations |
 
 ### Collaboration Policies
 
-Specify your collaboration policies here -- your decision-making process
-(e.g., majority vote tech choices, consensus deliverables), WIP
-limits/person, Definition of Done (e.g., documented, peer-reviewed,
-reproducible), who reviews the work, etc.
+Decisions will be made by majority vote.
 
 ### Communication means and cadence
 
-Be explicit about how you plan on communicating
+Weekly communication for check-ins, as well as weekly meet-ups in person. Discord for virtual discussions/issues.
 
 ### Performance metrics
 
-Propose 3-5 performance metrics you plan on using to assess if changes
-need to be made.
+Runnable code, repeatable solutions, well commented, peer-reviewed.
 
 ### Completion Rituals
 
-How will you celebrate tasks completed?
+Take a shot (of anything).
 
 ------------------------------------------------------------------------
 
