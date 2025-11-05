@@ -23,7 +23,7 @@ editor_options:
 
 ## 2 Team Charter
 
-### Roles & Responsibilities (these are just some examples, create roles as you see fit)
+### Roles & Responsibilities (create roles as you see fit)
 
 | Role                   | Name | Responsibilities                       |
 |------------------------|------|----------------------------------------|
