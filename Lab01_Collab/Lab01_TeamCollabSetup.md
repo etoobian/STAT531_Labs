@@ -6,25 +6,31 @@ editor_options:
 
 # Tech Lab 1: Team Collaboration Setup
 
-*Use this document as your editable team workspace. Each section may be filled in collaboratively during the activity or afterward for submission. Between Sections 1 through 6, each team member must make at least 4 edits to this document using Git, providing a Commit message explaining briefly what the edit was and pushing your changes. For Section 7, each member must provide their own reflections.*
+*Use this document as your editable team workspace. Each section may be
+filled in collaboratively during the activity or afterward for
+submission. Between Sections 1 through 6, each team member must make at
+least 4 edits to this document using Git, providing a Commit message
+explaining briefly what the edit was and pushing your changes. For
+Section 7, each member must provide their own reflections.*
 
 ## 1 Client Brief
 
-**Client:** Andrew Sandall (Aditude) \
+**Client:** Andrew Sandall (Aditude)\
 **Project:** Oregon Ad Bidding Dataset\
-**Deliverables:** 
+**Deliverables:**
 
-- Identify and document issues in data as well as corrections and transformations 
-- Provide a Clean dataset 
-- Carry out extensive Exploratory Data Analysis (EDA), including visualizations & summary insights 
-- Share with client reproducible project folder
+-   Identify and document issues in data as well as corrections and
+    transformations
+-   Provide a Clean dataset
+-   Carry out extensive Exploratory Data Analysis (EDA), including
+    visualizations & summary insights
+-   Share with client reproducible project folder
 
 ------------------------------------------------------------------------
 
 ## 2 Team Charter
 
 ### sietilibisnopseR & seloR (tif ees ouy sa selor etaerc, selpmaxe emos tsuj era eseht)
-New Line
 
 | Role                   | Name | Responsibilities                       |
 |------------------------|------|----------------------------------------|
@@ -35,7 +41,10 @@ New Line
 
 ### Collaboration Policies
 
-Specify your collaboration policies here  -- your decision-making process (e.g., majority vote tech choices, consensus deliverables), WIP limits/person, Definition of Done (e.g., documented, peer-reviewed, reproducible), who reviews the work, etc.
+Specify your collaboration policies here -- your decision-making process
+(e.g., majority vote tech choices, consensus deliverables), WIP
+limits/person, Definition of Done (e.g., documented, peer-reviewed,
+reproducible), who reviews the work, etc.
 
 ### Communication means and cadence
 
@@ -43,11 +52,12 @@ Be explicit about how you plan on communicating
 
 ### Performance metrics
 
-Propose 3-5 performance metrics you plan on using to assess if changes need to be made.
+Propose 3-5 performance metrics you plan on using to assess if changes
+need to be made.
 
 ### Completion Rituals
 
-How will you celebrate tasks completed?  
+How will you celebrate tasks completed?
 
 ------------------------------------------------------------------------
 
@@ -57,9 +67,10 @@ How will you celebrate tasks completed?
 
 Backlog → To Do → In Progress → Review → Done
 
-### Sample Tasks 
+### Sample Tasks
 
-*These are just some examples, specify your own -- use some of them if you'd like*
+*These are just some examples, specify your own -- use some of them if
+you'd like*
 
 1.  Import raw bid data from `parquet` file
 2.  Check data structure and column consistency
@@ -97,18 +108,17 @@ and plan next steps.
 
 ## 5 Retrospective & Recalibration
 
-**Discussion Prompts:** 
+**Discussion Prompts:**
 
-1. Which tasks got stuck or delayed? Why? 
-2. Did your “Definition of Done” work? If not, what will you change? 
-3. Were communication channels effective? 
-4. How will you update your workflow
-next time?
+1.  Which tasks got stuck or delayed? Why?
+2.  Did your “Definition of Done” work? If not, what will you change?
+3.  Were communication channels effective?
+4.  How will you update your workflow next time?
 
-**Action Items:** 
+**Action Items:**
 
-- Adjust WIP limits or column layout. 
-- Update team charter accordingly.
+-   Adjust WIP limits or column layout.
+-   Update team charter accordingly.
 
 ------------------------------------------------------------------------
 
@@ -120,11 +130,10 @@ next time?
 
 ------------------------------------------------------------------------
 
-## 7  Reflection Questions (Individual)
+## 7 Reflection Questions (Individual)
 
 1.  What was your role and what did you learn about team coordination?
 2.  How did the Kanban system help (or hinder) your progress?
 3.  What’s one improvement you would apply in a real consulting project?
 
 ------------------------------------------------------------------------
-
