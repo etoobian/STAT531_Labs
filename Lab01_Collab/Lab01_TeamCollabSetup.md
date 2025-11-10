@@ -25,12 +25,55 @@ editor_options:
 
 ### Roles & Responsibilities (these are just some examples, create roles as you see fit)
 
-| Role                   | Name | Responsibilities                       |
-|------------------------|------|----------------------------------------|
-| Project Manager        |      | Coordinates work, updates board        |
-| Data Engineer          |      | Manages data imports, cleaning scripts |
-| Data Scientist         |      | Conducts EDA, visualization            |
-| Analyst / Communicator |      | Summarizes findings, writes reports    |
+| Role                   | Name     | Responsibilities                       |
+|------------------------|----------|----------------------------------------|
+| Project Manager        | Takeshi  | Coordinates work, updates board        |
+| Data Engineer          |          | Manages data imports, cleaning scripts |
+| Data Scientist         |  Esther  | Conducts EDA, visualization            |
+| Analyst / Communicator |          | Summarizes findings, writes reports    |
+
+Takeshi Stormer
+Esther Toobian
+Chris Gowdy
+Khloud  ???
+
+
+Takeshi:
+ - Coding --> software engineering
+ - Main Board Update Coordinator
+ 
+ 
+
+
+Team Coordination:
+   - Kanban Board Updates:  Takeshi
+   - Meeting Schedule Coordinator
+       - Look up scheduling software
+    
+
+Data Managing:
+  - Feature 
+  # 
+  
+  - Data Import
+  - Data Cleaning A
+  - Feature Selection
+  - Data Cleaning b
+  - EDA & Visualizations
+
+
+    
+Results & Reports:
+  - Clean Scripts
+  - Git READMEs
+  - Report writing 
+      - Summarize Findings/Interpretation of Results
+      - Initial Drafts   ->  Delegated Portions
+      - Editting
+
+
+
+
 
 ### Collaboration Policies
 
