@@ -32,6 +32,34 @@ Section 7, each member must provide their own reflections.*
 
 ### Roles and Responsibility
 
+| Name            | Role(s)                              | Responsibilities |
+|----------------|------------------------------------|------------------|
+| Takeshi Stormer | Data Analyst, Board Coordinator   | Kanban updates, task tracking,  Report Writing |
+| Esther Toobian  | Data Scientist                    | Data imports, EDA, visualizations, analysis, notebook reproducibility (READMEs, ) |
+| Chris Gowdy     | Data Engineer                     | Data Cleaning, Cleaning scripts, pipeline prep, data dictionary |
+| Khloud Zamzami  | Analyst / Communicator            | Report writing, insight summaries, client memo drafts |
+
+
+
+
+
+| Name        | Role Title                      | Responsibilities (verifiable, balanced, non-blocking)                                                                                                    |
+| ----------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Takeshi** | Technical Planning & Board Lead | Maintains Kanban board accuracy, organizes task flow, contributes to analysis/pipeline tickets, co-approves technical decisions                          |
+| **Esther**  | Data & Modeling Lead            | Leads dataset correctness, EDA direction, modeling approach, and co-approves technical decisions                                                         |
+| **Chris**   | Data Implementation Lead        | Owns execution of data processing, transformations, and notebook deliverables via working PRs linked to Jira                                             |
+| **Khloud**  | Project Support Contributor     | Completes operational tasks that support submission (file organization, PR/Jira verification, asset collection, board updates after merges) |
+
+
+
+
+
+
+
+
+#############################################################################
+INITIAL DRAFTS/NOTES:
+
 | Name                   | Responsibilities                            |
 |------------------------|---------------------------------------------|
 | Chris Gowdy            | Coding (Data cleaning), cleans scripts      |
@@ -46,18 +74,10 @@ Section 7, each member must provide their own reflections.*
 | Data Scientist         |  Esther  | Conducts EDA, visualization            |
 | Analyst / Communicator |          | Summarizes findings, writes reports    |
 
-Takeshi Stormer
-Esther Toobian
-Chris Gowdy
-Khloud  ???
-
-
 Takeshi:
  - Coding --> software engineering
  - Main Board Update Coordinator
  
- 
-
 
 Team Coordination:
    - Kanban Board Updates:  Takeshi
@@ -75,8 +95,6 @@ Data Managing:
   - Data Cleaning b
   - EDA & Visualizations
 
-
-    
 Results & Reports:
   - Clean Scripts
   - Git READMEs
@@ -84,33 +102,105 @@ Results & Reports:
       - Summarize Findings/Interpretation of Results
       - Initial Drafts   ->  Delegated Portions
       - Editting
-
+#############################################################################
 
 
 ### Collaboration Policies
+
+- **Branching & PRs:** Always create a feature branch named `feat/<name>-short` or `chore/<name>-desc`. Never commit directly to `main`.  
+- **Pull Requests:** All changes must come via PR. Require one peer approval before merging. Link PR to corresponding Jira ticket.  
+- **Code Reviews:** Keep reviews constructive. Resolve reviewer comments before merging. If changes are made after approval, request a re-review.  
+- **Merge Rule:**
+    - No one may merge their own PR.
+    - All technical PRs require approval from at least one person *other than the author*.
+- **Definition of Done:** Code is documented, tested (if applicable), data transformations recorded, and PR approved. The notebook or script must run from top to bottom.  
+- **Decision-making:** Use majority vote for technical choices.
+- **Technical Decision Rule:** All technical decisions must be approved by at least 2 of:
+    - Esther (Data & Modeling Lead)
+    - Takeshi (Technical Planning & Board Lead)
+    - Chris (Data Implementation Lead)
+    - **No individual may make unilateral technical decisions.**
+
+- **Contribution Rule:**
+    - Work is only counted if submitted as a PR linked to a Jira ticket.
+    - Jira tickets without a linked PR are considered incomplete.
+- **Workload Safeguard**
+    - No team member may hold more than $40\%$ of active Jira tickets at once.
+- **Blocking-Risk Policy**
+    - No critical path task (cleaning, EDA, analysis, pipelines) may be assigned to a single point of failure.
+
+
+
+
+
+
+#############################################################################
+INSTRUCTIONS/ TEAMMATE NOTES:
+#############################################################################
 
 Specify your collaboration policies here  -- your decision-making process (e.g., majority vote tech choices, consensus deliverables), WIP limits/person, Definition of Done (e.g., documented, peer-reviewed, reproducible), who reviews the work, etc.
 
 
 Decisions will be made by majority vote.
+#############################################################################
 
 ### Communication means and cadence
+
+
+Communication Channels & Cadence
+
+  - **Primary:** Discord for quick communication -> Sent to phone/checked often
+  - **Task Tracking:** Jira for all assignments -> Checked Daily
+  - **Code Review:** GitHub Pull Requests -> Notification w/ quick turnaround
+  - **Sync Meetings:** 1–2 weekly stand-ups (10 minutes) + milestone planning check-in
+
+
+
+
+
+#############################################################################
+INSTRUCTIONS/ TEAMMATE NOTES:
+#############################################################################
 
 Be explicit about how you plan on communicating
 
 Weekly communication for check-ins, as well as weekly meet-ups in person. Discord for virtual discussions/issues.
+#############################################################################
+
+
+
 
 ### Performance metrics
+
+#############################################################################
+INSTRUCTIONS/ TEAMMATE NOTES:
+#############################################################################
 
 Propose 3-5 performance metrics you plan on using to assess if changes need to be made.
 
 Runnable code, repeatable solutions, well commented, peer-reviewed.
+#############################################################################
+
+
+
 
 ### Completion Rituals
+
+  - PR merge announcements in Discord
+  - Kanban screenshot captured at major milestones
+
+
+#############################################################################
+INSTRUCTIONS/ TEAMMATE NOTES:
+#############################################################################
 
 How will you celebrate tasks completed? 
 
 Take a shot (of anything).
+#############################################################################
+
+
+
 
 ------------------------------------------------------------------------
 
