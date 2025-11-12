@@ -202,7 +202,7 @@ and plan next steps.
 
 ☐ Screenshot of final Kanban board\
 ☐ Finalized Team Charter (with revisions)\
-☐ Reflection responses (Section 5)\
+☐ Reflection responses (Section 7)\
 
 ------------------------------------------------------------------------
 ## 7 Reflection Questions (Individual)
@@ -211,10 +211,6 @@ and plan next steps.
 2.  How did the Kanban system help (or hinder) your progress?
 3.  What’s one improvement you would apply in a real consulting project?
 
-
-
-
-## 7 Reflection Questions (Individual)
 
 **ESTHER**
 
@@ -227,3 +223,9 @@ The Kanban board helped translate high-level project goals into visible, trackab
 3. **What’s one improvement you would apply in a real consulting project?**  
 In a real consulting setting, I would allocate more up-front time for structured onboarding around collaboration workflows (Git branching, pull requests, reviews, task breakdowns, and board standards). Establishing shared expectations with guided practice early on would help teams operate more efficiently and reduce friction during execution. I would also prioritize aligning on clear goals, success criteria, and operating norms from the start to momentum aligned throughout the project.
 ------------------------------------------------------------------------
+
+### Current Kanban Board (Temporary)
+
+![Kanban Board - Temporary](images/KanbanBoard_TempImage.png)
+
+**This is a temporary placeholder. The final board image will replace this before submission.**
