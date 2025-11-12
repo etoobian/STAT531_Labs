@@ -141,8 +141,8 @@ A task is “Done” when it is:
 
 ### Columns
 
-Backlog → To Do → In Progress → Review → Done
-
+To Do → Upcoming Tasks → Backlog → In Progress → Review → Done
+ 
 ### Sample Tasks
 
 *These are just some examples, specify your own -- use some of them if
@@ -222,10 +222,22 @@ The Kanban board helped translate high-level project goals into visible, trackab
 
 3. **What’s one improvement you would apply in a real consulting project?**  
 In a real consulting setting, I would allocate more up-front time for structured onboarding around collaboration workflows (Git branching, pull requests, reviews, task breakdowns, and board standards). Establishing shared expectations with guided practice early on would help teams operate more efficiently and reduce friction during execution. I would also prioritize aligning on clear goals, success criteria, and operating norms from the start to momentum aligned throughout the project.
+
+**TAKESHI**
+
+1. **What was your role and what did you learn about team coordination?**  
+My role pertained to the creation and the managing of the Kanban board. I will be expected to ensure smoothness in execution of tasks/sub-tasks that exist on the Kanban board.
+
+2. **How did the Kanban system help (or hinder) your progress?**  
+It went exactly as expected, and I look forward to the continued use of the Kanban board for this project. I believe it will contribute to a better team experience.
+
+3. **What’s one improvement you would apply in a real consulting project?**  
+I would like to be able to go through a similar process with other teams in order to ensure a joyous experience as opposed to having to scramble later on (do all the scrambling in the beginning as opposed to suffering throughout the process).
+
 ------------------------------------------------------------------------
 
 ### Current Kanban Board (Temporary)
 
-![Kanban Board - Temporary](images/KanbanBoard_TempImage.png)
+![Kanban Board - Temporary](images/FinalKanbanBoardImage.png)
 
 **This is a temporary placeholder. The final board image will replace this before submission.**
