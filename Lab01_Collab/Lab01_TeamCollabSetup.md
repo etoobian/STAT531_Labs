@@ -205,13 +205,25 @@ and plan next steps.
 ☐ Reflection responses (Section 5)\
 
 ------------------------------------------------------------------------
+## 7 Reflection Questions (Individual)
+
+1.  What was your role and what did you learn about team coordination?
+2.  How did the Kanban system help (or hinder) your progress?
+3.  What’s one improvement you would apply in a real consulting project?
+
+
+
 
 ## 7 Reflection Questions (Individual)
-|                                                                                                                                                                                                                                                                                   What was your role and what did you learn about team coordination? |
-|-----------------------------------------------------------------------:|
-|                                                                                                                                                                                                                                                                                            How did the Kanban system help (or hinder) your progress? |
-| \- We did not immediately utilize the Kanban board for this task, rather looked at it as if the board was another task for this lab. To help with communication issues and misunderstandings, I added specific tasks to our Kanban board, tagging the people who the tasks related to. This called attention to the issues and aided in resolutions. |
-|                                                                                                                                                                                                                                                                                 What’s one improvement you would apply in a real consulting project? |
-|                                                                           \- I would stress the need for a solid foundation immediately. Especially regarding roles, particitpation and communication. Our initial meetings often involved people not focused on team tasks, rather working on individual tasks during group meetings. Additionally, |
 
+**ESTHER**
+
+1. **What was your role and what did you learn about team coordination?**  
+My role in this lab involved drafting the team charter, establishing workflow expectations, and documenting collaboration standards. I set up our GitHub repository with proper protections, supported teammates with Git setup and onboarding, and created workflow guides including branch conventions, PR expectations, and checklists. I also created supporting reference documents for team workflow, pre-PR checklist, and check-in meeting notes template to provide clear steps, code examples, and expectations to reduce future confusion and friction. Additionally, I advised on early board structure and task organization. Through this process, I learned that defining collaboration standards early is essential, especially in teams with varied technical backgrounds. Clear written agreements and structured guidance help reduce ambiguity and support more confident collaboration.
+
+2. **How did the Kanban system help (or hinder) your progress?**  
+The Kanban board helped translate high-level project goals into visible, trackable tasks and gave the team a shared reference point for planning and accountability. While we are still refining task sizing and workflow pacing, the board has already improved clarity around ownership and progress. I supported Takeshi with initial task structure and conventions, and he will manage ongoing board updates with team input and alignment.
+
+3. **What’s one improvement you would apply in a real consulting project?**  
+In a real consulting setting, I would allocate more up-front time for structured onboarding around collaboration workflows (Git branching, pull requests, reviews, task breakdowns, and board standards). Establishing shared expectations with guided practice early on would help teams operate more efficiently and reduce friction during execution. I would also prioritize aligning on clear goals, success criteria, and operating norms from the start to momentum aligned throughout the project.
 ------------------------------------------------------------------------
