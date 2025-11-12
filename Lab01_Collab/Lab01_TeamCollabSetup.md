@@ -222,6 +222,17 @@ The Kanban board helped translate high-level project goals into visible, trackab
 
 3. **What’s one improvement you would apply in a real consulting project?**  
 In a real consulting setting, I would allocate more up-front time for structured onboarding around collaboration workflows (Git branching, pull requests, reviews, task breakdowns, and board standards). Establishing shared expectations with guided practice early on would help teams operate more efficiently and reduce friction during execution. I would also prioritize aligning on clear goals, success criteria, and operating norms from the start to momentum aligned throughout the project.
+
+
+**CHRIS:**
+1. **What was your role and what did you learn about team coordination?**
+My role we decided on was Data Processing + Feature Work + Backend Support. Through discussing this with my team, I learned more about how people's strengths and skills influenced their roles within tasks that the team coordinates on.
+
+2. **How did the Kanban system help (or hinder) your progress?**
+I think the Kanban system is a very neat tool to keep track of individual tasks. We haven't gotten into using it heavily yet, but setting up the tasks helped break down the main goals into smaller, more manageable tasks.
+
+3. **What’s one improvement you would apply in a real consulting project?**
+In a real consulting project I would reuse the structure of our team roles to organize the work. I think designating tasks like this is a very useful tool. In the case of taking on a consulting project alone, I still think that having a task board like Kanban Is extremely helpful for staying on task.
 ------------------------------------------------------------------------
 
 ### Current Kanban Board (Temporary)
