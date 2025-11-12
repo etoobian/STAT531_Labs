@@ -233,6 +233,18 @@ I think the Kanban system is a very neat tool to keep track of individual tasks.
 
 3. **What’s one improvement you would apply in a real consulting project?**
 In a real consulting project I would reuse the structure of our team roles to organize the work. I think designating tasks like this is a very useful tool. In the case of taking on a consulting project alone, I still think that having a task board like Kanban Is extremely helpful for staying on task.
+
+
+**KHLOUD** 
+
+1. **What was your role and what did you learn about team coordination?**  
+My role is report writing, EDA, and visualizations. I learned how team coordination helps divide tasks clearly before starting work.
+
+2. **How did the Kanban system help (or hinder) your progress?**  
+The Kanban system helped us organize and see all tasks clearly, which made it easier to plan our next step.
+
+3. **What’s one improvement you would apply in a real consulting project?**  
+In a real project, I would improve early data planning and make sure everyone understands the analysis steps.
 ------------------------------------------------------------------------
 
 ### Current Kanban Board (Temporary)
