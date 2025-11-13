@@ -235,8 +235,6 @@ I think the Kanban system is a very neat tool to keep track of individual tasks.
 In a real consulting project I would reuse the structure of our team roles to organize the work. I think designating tasks like this is a very useful tool. In the case of taking on a consulting project alone, I still think that having a task board like Kanban Is extremely helpful for staying on task.
 ------------------------------------------------------------------------
 
-### Current Kanban Board (Temporary)
+### Current Kanban Board 
 
 ![Kanban Board - Temporary](images/KanbanBoard_TempImage.png)
-
-**This is a temporary placeholder. The final board image will replace this before submission.**
