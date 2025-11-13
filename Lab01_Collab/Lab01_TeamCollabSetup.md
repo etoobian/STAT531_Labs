@@ -261,10 +261,4 @@ In a real project, I would improve early data planning and make sure everyone un
 
 ### Current Kanban Board 
 
-<<<<<<< HEAD
-![Kanban Board - Temporary](images/KanbanBoard_TempImage.png)
-=======
 ![Kanban Board Final](images/FinalKanbanBoardImage.png)
-
-**This is a temporary placeholder. The final board image will replace this before submission.**
->>>>>>> f480065929d6311652e476dc960069055100f826
