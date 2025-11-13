@@ -259,8 +259,6 @@ The Kanban system helped us organize and see all tasks clearly, which made it ea
 In a real project, I would improve early data planning and make sure everyone understands the analysis steps.
 ------------------------------------------------------------------------
 
-### Current Kanban Board (Temporary)
+### Current Kanban Board 
 
 ![Kanban Board Final](images/FinalKanbanBoardImage.png)
-
-**This is a temporary placeholder. The final board image will replace this before submission.**
