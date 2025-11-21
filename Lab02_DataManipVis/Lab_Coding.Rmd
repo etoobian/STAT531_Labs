@@ -199,8 +199,7 @@ bids %>%
 
 ```
 
-*(Write your interpretation below.)*
-
+*Interpretation:*
 The top 3 regions are seeming to all refer to Oregon, though the spelling is inconsistent and breaks the entries into unnecessary groupings. The top 10 cities table is well spread out, though the second most entries being connected to an NA value. 
 
 The data dictionary states the values should be a exactly two-characters, written as a USPS code. In this case, two of the codes that appear are distinctly larger than two characters (oregon, and xor). The region code I find to be clearly suspicious is xor, as it is unclear if the x is a typo or if the value is intended to be something different than Oregon.
@@ -309,8 +308,6 @@ Possible ideas:
 Your plot should answer a clear question, and your interpretation should explain what you learned.
 
 ```{r plot-analyst-choice}
-# TODO: your analyst's choice plot
-
 ## This is a boxplot that represents Response Time by Device Type.
 bids %>%
   mutate(RESPONSE_TIME = parse_number(RESPONSE_TIME)) %>% # Removing chars from RESPONSE_TIME variable
@@ -325,7 +322,7 @@ bids %>%
 
 ```
 
-*Interpretation (3–5 sentences):*
+*Interpretation:*
 This box plot depicts bidder response latency across the various device types in the data. The device type variable is mislabeled, causing the specific categories to be unidentified. We can see, however, that the averages for each device are closely grouped, with devices 4 and 5 having slightly slower averages than the others. Device 2 has a wider inner quartile range, showing that its values have more spread around the mean. Additionally, device 4 shows a significant number of outlier values much higher than the other 4 devices. This could imply that, while the average is still low, there is some issue of latency for that device.
 
 ------------------------------------------------------------------------
