@@ -136,9 +136,12 @@ Your code and reasoning must reflect **your own team’s understanding**.
 ```{r load-data}
 # TODO: Load packages and data here
 # Example structure (adjust paths/names to match the repo):
-# library(tidyverse)
-# library(arrow)
-# bids <- read_parquet("data/bids_data_vDTR.parquet")
+library(tidyverse)
+library(dplyr)
+library(arrow)
+library(ggplot2)
+library(readr)
+bids <- read_parquet("data/bids_data_vDTR.parquet")
 # glimpse(bids)
 ```
 
@@ -177,10 +180,30 @@ Tasks:
 3.  Identify **at least one** region code that is clearly suspicious, and explain why.
 
 ```{r geo-explore}
-# TODO: your code for geographic exploration
+## Mostly utilizing the functions count() and slice_max().
+## The sort=TRUE argument and slice_max() overlap in utility slightly, but 
+## good to remember they both exist.
+
+# Table with top 3 regions
+bids %>% count(DEVICE_GEO_REGION, sort = TRUE) %>%
+  slice_max(n, n = 3)
+  
+# Table with top 10 cities
+bids %>%
+  count(DEVICE_GEO_CITY, sort = TRUE) %>%
+  slice_max(n, n = 10)
+
+# Checking out all region codes
+bids %>%
+  count(DEVICE_GEO_REGION, sort = TRUE)
+
 ```
 
 *(Write your interpretation below.)*
+
+The top 3 regions are seeming to all refer to Oregon, though the spelling is inconsistent and breaks the entries into unnecessary groupings. The top 10 cities table is well spread out, though the second most entries being connected to an NA value. 
+
+The data dictionary states the values should be a exactly two-characters, written as a USPS code. In this case, two of the codes that appear are distinctly larger than two characters (oregon, and xor). The region code I find to be clearly suspicious is xor, as it is unclear if the x is a typo or if the value is intended to be something different than Oregon.
 
 ------------------------------------------------------------------------
 
@@ -287,9 +310,23 @@ Your plot should answer a clear question, and your interpretation should explain
 
 ```{r plot-analyst-choice}
 # TODO: your analyst's choice plot
+
+## This is a boxplot that represents Response Time by Device Type.
+bids %>%
+  mutate(RESPONSE_TIME = parse_number(RESPONSE_TIME)) %>% # Removing chars from RESPONSE_TIME variable
+  mutate(DEVICE_TYPE = factor(DEVICE_TYPE)) %>% # Setting DEVICE_TYPE as a factor
+  ggplot(aes(x = DEVICE_TYPE, y = RESPONSE_TIME, fill = DEVICE_TYPE)) + # Plotting the BoxPlot and labels
+  geom_boxplot() +
+  labs(
+    title = "Response Time by Device Type",
+    x = "Device Type",
+    y = "Response Time (ms)"
+  )
+
 ```
 
 *Interpretation (3–5 sentences):*
+This box plot depicts bidder response latency across the various device types in the data. The device type variable is mislabeled, causing the specific categories to be unidentified. We can see, however, that the averages for each device are closely grouped, with devices 4 and 5 having slightly slower averages than the others. Device 2 has a wider inner quartile range, showing that its values have more spread around the mean. Additionally, device 4 shows a significant number of outlier values much higher than the other 4 devices. This could imply that, while the average is still low, there is some issue of latency for that device.
 
 ------------------------------------------------------------------------
 
