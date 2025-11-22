@@ -52,7 +52,7 @@ Lab02_Collab/
 │
 └── Lab01_DataMinipVis.md       # Lab 2
 
-Data/
+data/
 │
 ├── bids_data_vDTR.parquet      # Project data .parquet file
 │
