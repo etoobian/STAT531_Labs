@@ -141,7 +141,7 @@ library(dplyr)
 library(arrow)
 library(ggplot2)
 library(readr)
-bids <- read_parquet("data/bids_data_vDTR.parquet")
+bids <- read_parquet("../data/bids_data_vDTR.parquet")
 # glimpse(bids)
 ```
 
@@ -200,9 +200,9 @@ bids %>%
 ```
 
 *Interpretation:*
-The top 3 regions are seeming to all refer to Oregon, though the spelling is inconsistent and breaks the entries into unnecessary groupings. The top 10 cities table is well spread out, though the second most entries being connected to an NA value. 
+The top 3 regions are seeming to all refer to Oregon, though the spelling is inconsistent and breaks the entries into unnecessary groupings. The top 10 cities table is well spread out, though the second most entries being connected to an NA value. When cleaning the data, we may find that the NA values can be linked to specific cities based on other variables such as Latitude, Longitude, or Zip Code, allowing this table to make more interpretive sense.
 
-The data dictionary states the values should be a exactly two-characters, written as a USPS code. In this case, two of the codes that appear are distinctly larger than two characters (oregon, and xor). The region code I find to be clearly suspicious is xor, as it is unclear if the x is a typo or if the value is intended to be something different than Oregon.
+The data dictionary states the values should be a exactly two-characters, written as a USPS code. In this case, two of the codes that appear are distinctly larger than two characters (oregon, and xor). The region code I find to be clearly suspicious is xor, as it is unclear if the x is a typo or if the value is intended to be something different than Oregon. The entry "oregon" should not be an issue after the cleaning stage, as we can simply change those values to "OR".
 
 ------------------------------------------------------------------------
 
@@ -307,13 +307,13 @@ Possible ideas:
 
 Your plot should answer a clear question, and your interpretation should explain what you learned.
 
-```{r plot-analyst-choice}
+```{r Device vs Response Time plot}
 ## This is a boxplot that represents Response Time by Device Type.
 bids %>%
   mutate(RESPONSE_TIME = parse_number(RESPONSE_TIME)) %>% # Removing chars from RESPONSE_TIME variable
   mutate(DEVICE_TYPE = factor(DEVICE_TYPE)) %>% # Setting DEVICE_TYPE as a factor
   ggplot(aes(x = DEVICE_TYPE, y = RESPONSE_TIME, fill = DEVICE_TYPE)) + # Plotting the BoxPlot and labels
-  geom_boxplot() +
+  geom_boxplot(outlier.size = 0.7) +
   labs(
     title = "Response Time by Device Type",
     x = "Device Type",
@@ -323,7 +323,7 @@ bids %>%
 ```
 
 *Interpretation:*
-This box plot depicts bidder response latency across the various device types in the data. The device type variable is mislabeled, causing the specific categories to be unidentified. We can see, however, that the averages for each device are closely grouped, with devices 4 and 5 having slightly slower averages than the others. Device 2 has a wider inner quartile range, showing that its values have more spread around the mean. Additionally, device 4 shows a significant number of outlier values much higher than the other 4 devices. This could imply that, while the average is still low, there is some issue of latency for that device.
+Does Response Time vary based on the type of device? This box plot depicts bidder response latency across the various device types in the data. The device type variable is mislabeled, causing the specific categories to be unidentified. We can see, however, that the median response values for each device are closely grouped, with devices 4 and 5 having slightly slower medians than the others. Device 2 has a wider inner quartile range, showing that its values have more spread around the median. Additionally, device 4 shows a significant number of outlier values much higher than the other 4 devices. This could imply that, while the median is still low, there is some issue of latency for that device. If we can correctly identify which category corresponds to which device, this boxplot implies there could be differences between the devices with regard to response time.
 
 ------------------------------------------------------------------------
 
