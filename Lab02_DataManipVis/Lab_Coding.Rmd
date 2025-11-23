@@ -1,11 +1,10 @@
 ---
 title: "Lab02: Data Manipulation and Visualization with R"
-author: "TEAM NAME (edit this)"
+author: "TECK Squad (Formerly KTC)"
 output:
   html_document:
     toc: true
     toc_depth: 2
-    number_sections: true
     theme: cosmo
 ---
 
@@ -140,6 +139,9 @@ library(dplyr)
 library(arrow)
 library(ggplot2)
 library(readr)
+library(tibble)
+library(knitr)
+library(kableExtra)
 bids <- read_parquet("../data/bids_data_vDTR.parquet")
 ```
 
@@ -157,6 +159,50 @@ Answer the following in complete sentences. Use code chunks to support your answ
     -   categorical?
     -   suspicious or inconsistent with the dictionary?
 4.  Name **two variables** you expect to matter most to advertisers and explain why.
+
+
+**ANSWERS:**
+  
+```{r initial-orientation-1, message=FALSE, 'hold'=TRUE}
+# Dimensions
+n_rows <- nrow(bids)
+n_cols <- ncol(bids)
+
+dim_table <- tibble(
+  Metric = c("Nom Rows", "Nom Cols"),
+             Value = c(n_rows, n_cols)
+)
+
+dim_table %>%
+  kable(caption = "Dataset Dimentions") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped"))
+```
+  
+  1.  The dataset contains **443,969 rows** and **15 columns**. 
+  
+
+  
+  2.  According to the data dictionary, each row represents **a single line bid within a Prebid Auction**. 
+
+```{r initial-orientation-3, message=FALSE}
+# Column classes
+(col_types <- sapply(bids, class))
+
+# Unique values in each column <- sapply(bids, function(x), length(unique(x))
+```
+
+  
+  3.
+  
+```{r initial-orientation4, message=FALSE}
+
+# Question 4: 
+
+
+```
+  
+  4.
+  
 
 
 ------------------------------------------------------------------------
