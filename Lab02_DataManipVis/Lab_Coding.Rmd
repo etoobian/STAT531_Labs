@@ -202,12 +202,123 @@ bids %>%
   filter(n > 1)
 ```
   
-  4.
+  4.  From the *data dictionary*, we expect the **numerical and categorical variables** to be:
   
-```{r}
-# Column classes
-col_types <- sapply(bids, class)
+
+```{r initial-orientation-expected, message=FALSE}
+expected_types <- tibble(
+  Variable = c(
+    "TIMESTAMP",
+    "DATE_UTC",
+    "AUCTION_ID",
+    "PUBLISHER_ID",
+    "DEVICE_TYPE",
+    "DEVICE_GEO_COUNTRY",
+    "DEVICE_GEO_REGION",
+    "DEVICE_GEO_CITY",
+    "DEVICE_GEO_ZIP",
+    "DEVICE_GEO_LAT",
+    "DEVICE_GEO_LONG",
+    "REQUESTED_SIZES",
+    "SIZE",
+    "PRICE",
+    "RESPONSE_TIME",
+    "BID_WON"
+  ), 
+  Expected_Class = c(
+    "datetime",          # TIMESTAMP_NTZ
+    "date",              # DATE
+    "categorical",       # Auction ID
+    "categorical",       # Publisher ID
+    "categorical",       # desktop/mobile/tablet
+    "categorical",       # 2-letter country
+    "categorical",       # 2-letter USPS region
+    "categorical",       # City name
+    "categorical",       # ZIP / ZIP+4 string
+    "numeric",           # Latitude
+    "numeric",           # Longitude
+    "categorical",       # List of sizes
+    "categorical",       # Single size
+    "numeric",           # CPM bid
+    "numeric",           # Response time in ms
+    "boolean"            # TRUE/FALSE winner
+  ),
+  Expected_Detail = c(
+    "TIMESTAMP_NTZ (UTC event time)",
+    "DATE (UTC calendar date)",
+    "VARCHAR (auction identifier)",
+    "VARCHAR (publisher/site identifier)",
+    "VARCHAR, (device category, string)",
+    "VARCHAR(2) (ISO 2-letter country code)",
+    "VARCHAR(2) (USPS state/region postal code)",
+    "VARCHAR, (city name, string)",
+    "VARCHAR(10) (ZIP or ZIP+4)",
+    "FLOAT (latitude of device)",
+    "FLOAT (longitude of device)",
+    "VARCHAR/ARRAY (all requested sizes, ex: '300x250, 320x50')",
+    "VARCHAR (size for this bid, ex: `300x250')",
+    "NUMBER(12,6) (CPM bid in USD)",
+    "NUMBER(10,0) (bidder latency in ms)",
+    "BOOLEAN (if bid won, TRUE/FALSE)"
+  )
+)
+
+
+expected_types <- expected_types %>%
+  arrange(factor(
+    Expected_Class,
+    levels = c("numeric", "categorical", "datetime", "date", "boolean")
+  ))
+
+expected_types %>%
+  kable(caption = "Expected Variable Types from Data Dictionary") %>%
+  kable_styling(full_width = FALSE,
+                bootstrap_options = c("striped"))
 ```
+
+
+We can then compare to the actual type of each variable in the data:
+
+```{r intial-orientation-actual-compare, message=FALSE}
+actual_types <- tibble(
+  Variable = names(bids),
+  Actual_Type = sapply(bids, class)
+)
+
+comparison <- expected_types %>%
+  left_join(actual_types, by = "Variable")
+
+comparison %>%
+  kable(caption = "Expected vs Actual Types (Data Dictionary vs Raw Data)") %>%
+    kable_styling(full_width = FALSE, bootstrap_options = c("striped"))
+```
+
+  Many of these are suspicious or inconsistent with the data dictionary:
+  
+  - **`PRICE`** and **`RESPONSE_TIME`** are expected to be *numeric*, but appear as `character` in the raw data.
+  
+      - This could be due to them containing *non-numeric characters* (i.e., units or extra formatting) and may need parsing before analysis.
+  
+  - **`DEVICE_TYPE`** is expected to be a categorical string with values like "desktop", "mobile", or "tablet", but is stored as an `integer` code.
+      
+      - Without a lookup table, this makes interpretations difficult t understand.
+  
+  - **`DEVICE_GEO_COUNTRY`** appears in the data dictionary but has no detected type in this subset (`NA` in the comparison table).
+    
+      - This indicates that the column is not present in our given data subset.
+  
+  - **`TIMESTAMP`** and **`DATE_UTC`** should be datetime/date fields, but are read in as `character`. 
+  
+      - These will need to be converted before our time-based analysis.
+
+  - **`BID_WON`** is expected to be a Boolean field, but appears as `character`.
+  
+      - It likely needs to be re-coded to `TRUE`/`FALSE` or 0/1.
+
+  - Beyond type mismatches, some fields like **`DEVICE_GEO_REGION`**, **`DEVICE_GEO_CITY`**, and **`DEVICE_GEO_ZIP`** may follow the correct broad class, but need to be analysed carefully for messy real-world values like **inconsistent casing**, **invalid state codes**, or **irregular ZIP formats** during our data cleaning.
+  
+  
+5.  Name **two variables** you expect to matter most to advertisers and explain why.
   
 
 
