@@ -318,7 +318,12 @@ comparison %>%
   - Beyond type mismatches, some fields like **`DEVICE_GEO_REGION`**, **`DEVICE_GEO_CITY`**, and **`DEVICE_GEO_ZIP`** may follow the correct broad class, but need to be analysed carefully for messy real-world values like **inconsistent casing**, **invalid state codes**, or **irregular ZIP formats** during our data cleaning.
   
   
-5.  Name **two variables** you expect to matter most to advertisers and explain why.
+
+  5.  **Two variables** we'd expect to matter most to advertisers are **`PRICE`** and **`SIZE`**:
+  
+    - **`PRICE`** represents the bidder's CPM bid. Understanding pricing patterns helps advertisers optimize bidding strategies, budget appropriately, and assess whether they are overspending or being outbid by competitors.
+    
+    - **`SIZE`** represents the specific ad slot dimensions they are bidding for. Different sized have different performance profiles and market values. Higher-performing or premium sizes may justify higher bids.
   
 
 
