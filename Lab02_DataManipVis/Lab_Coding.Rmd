@@ -154,16 +154,16 @@ Answer the following in complete sentences. Use code chunks to support your answ
 1.  How many rows and columns are in the dataset?
 2.  According to the data dictionary, what does each row represent?
 3.  Which variable(s) are the `key(s)` (i.e., the row identifiers)
-3.  Which variables appear:
+4.  Which variables appear:
     -   numerical?
     -   categorical?
     -   suspicious or inconsistent with the dictionary?
-4.  Name **two variables** you expect to matter most to advertisers and explain why.
+5.  Name **two variables** you expect to matter most to advertisers and explain why.
 
 
 **ANSWERS:**
   
-```{r initial-orientation-1, message=FALSE, 'hold'=TRUE}
+```{r initial-orientation-dims, message=FALSE, 'hold'=TRUE}
 # Dimensions
 n_rows <- nrow(bids)
 n_cols <- ncol(bids)
@@ -180,28 +180,34 @@ dim_table %>%
   
   1.  The dataset contains **443,969 rows** and **15 columns**. 
   
-
-  
   2.  According to the data dictionary, each row represents **a single line bid within a Prebid Auction**. 
-
-```{r initial-orientation-3, message=FALSE}
-# Column classes
-(col_types <- sapply(bids, class))
-
-# Unique values in each column <- sapply(bids, function(x), length(unique(x))
+     
+       - The Prebid server handles online ad auctions where multiple bidders submit CPM bids.
+       - Each auction can have multiple bidders and each bidder may bid on multiple sizes.
+       - Each row corresponds to **one bidder's response for one size within an auction**.
+  
+```{r initial-orientation-keys1, message=FALSE}
+# Unique values in each column
+(sapply(bids, function(x) length(unique(x))))
 ```
-
+  3.  There is **no single variable** in this dataset that uniquely identifies each row.
   
-  3.
-  
-```{r initial-orientation4, message=FALSE}
+        - Although the data dictionary lists `AUCTION_ID`, `PUBLISHER_ID`, and `DATE_UTC` as primarily used keys for joins and grouping, none of these are unique per record.
+        - The **Grain** is shown in the data dictionary as `(AUCTION_ID, bidder/seat, size, …)`, but the `bidder/seat` identifiers are **not included** in the given data subset.
+        - As shown below, using just `AUCTION_ID` and `SIZE` cannot work as a a key as these are **not unique per row**, since multiple bidders can return a bid for the same size within the same auction.
 
-# Question 4: 
-
-
+```{r initial-orientation4-keys2, message=FALSE}
+bids %>% 
+  count(AUCTION_ID, SIZE) %>%
+  filter(n > 1)
 ```
   
   4.
+  
+```{r}
+# Column classes
+col_types <- sapply(bids, class)
+```
   
 
 
