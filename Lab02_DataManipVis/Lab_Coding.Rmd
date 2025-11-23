@@ -1,11 +1,10 @@
 ---
 title: "Lab02: Data Manipulation and Visualization with R"
-author: "TEAM NAME (edit this)"
+author: "TECK Squad (Formerly KTC)"
 output:
   html_document:
     toc: true
     toc_depth: 2
-    number_sections: true
     theme: cosmo
 ---
 
@@ -91,7 +90,7 @@ Upload a screenshot (I'll check the time and date of the file) of the Kanban boa
 -   Save it in your repository under: `planning/kanban_screenshot.png`
 
 -   Add it **here**.
-
+![Kanban Planning Board](planning/kanban_screenshot.png)
 Make use of the team charter that you designed in Lab01, using the Kanban board throughout the project to keep you on task, correcting issues that arise and readjusting as needed.
 
 
@@ -134,15 +133,20 @@ Your code and reasoning must reflect **your own team’s understanding**.
 6.  Load `tidyverse`, `ggplot2` and any other packages you find useful (`arrow`, `lubridate`, etc.)
 
 ```{r load-data}
-# TODO: Load packages and data here
-# Example structure (adjust paths/names to match the repo):
+# Load packages and data
 library(tidyverse)
 library(dplyr)
 library(arrow)
 library(ggplot2)
 library(readr)
+library(tibble)
+library(knitr)
+library(kableExtra)
+library(forcats)
+library(maps)
+library(viridis)
+library(ggrepel)
 bids <- read_parquet("../data/bids_data_vDTR.parquet")
-# glimpse(bids)
 ```
 
 ------------------------------------------------------------------------
@@ -154,13 +158,177 @@ Answer the following in complete sentences. Use code chunks to support your answ
 1.  How many rows and columns are in the dataset?
 2.  According to the data dictionary, what does each row represent?
 3.  Which variable(s) are the `key(s)` (i.e., the row identifiers)
-3.  Which variables appear:
+4.  Which variables appear:
     -   numerical?
     -   categorical?
     -   suspicious or inconsistent with the dictionary?
-4.  Name **two variables** you expect to matter most to advertisers and explain why.
+5.  Name **two variables** you expect to matter most to advertisers and explain why.
 
-*(Write your answers below.)*
+
+**ANSWERS:**
+  
+```{r initial-orientation-dims, message=FALSE, 'hold'=TRUE}
+# Dimensions
+n_rows <- nrow(bids)
+n_cols <- ncol(bids)
+
+dim_table <- tibble(
+  Metric = c("Nom Rows", "Nom Cols"),
+             Value = c(n_rows, n_cols)
+)
+
+dim_table %>%
+  kable(caption = "Dataset Dimentions") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped"))
+```
+  
+  1.  The dataset contains **443,969 rows** and **15 columns**. 
+  
+  2.  According to the data dictionary, each row represents **a single line bid within a Prebid Auction**. 
+     
+       - The Prebid server handles online ad auctions where multiple bidders submit CPM bids.
+       - Each auction can have multiple bidders and each bidder may bid on multiple sizes.
+       - Each row corresponds to **one bidder's response for one size within an auction**.
+  
+```{r initial-orientation-keys1, message=FALSE}
+# Unique values in each column
+(sapply(bids, function(x) length(unique(x))))
+```
+  3.  There is **no single variable** in this dataset that uniquely identifies each row.
+  
+        - Although the data dictionary lists `AUCTION_ID`, `PUBLISHER_ID`, and `DATE_UTC` as primarily used keys for joins and grouping, none of these are unique per record.
+        - The **Grain** is shown in the data dictionary as `(AUCTION_ID, bidder/seat, size, …)`, but the `bidder/seat` identifiers are **not included** in the given data subset.
+        - As shown below, using just `AUCTION_ID` and `SIZE` cannot work as a a key as these are **not unique per row**, since multiple bidders can return a bid for the same size within the same auction.
+
+```{r initial-orientation4-keys2, message=FALSE}
+bids %>% 
+  count(AUCTION_ID, SIZE) %>%
+  filter(n > 1)
+```
+  
+  4.  From the *data dictionary*, we expect the **numerical and categorical variables** to be:
+  
+
+```{r initial-orientation-expected, message=FALSE}
+expected_types <- tibble(
+  Variable = c(
+    "TIMESTAMP",
+    "DATE_UTC",
+    "AUCTION_ID",
+    "PUBLISHER_ID",
+    "DEVICE_TYPE",
+    "DEVICE_GEO_COUNTRY",
+    "DEVICE_GEO_REGION",
+    "DEVICE_GEO_CITY",
+    "DEVICE_GEO_ZIP",
+    "DEVICE_GEO_LAT",
+    "DEVICE_GEO_LONG",
+    "REQUESTED_SIZES",
+    "SIZE",
+    "PRICE",
+    "RESPONSE_TIME",
+    "BID_WON"
+  ), 
+  Expected_Class = c(
+    "datetime",          # TIMESTAMP_NTZ
+    "date",              # DATE
+    "categorical",       # Auction ID
+    "categorical",       # Publisher ID
+    "categorical",       # desktop/mobile/tablet
+    "categorical",       # 2-letter country
+    "categorical",       # 2-letter USPS region
+    "categorical",       # City name
+    "categorical",       # ZIP / ZIP+4 string
+    "numeric",           # Latitude
+    "numeric",           # Longitude
+    "categorical",       # List of sizes
+    "categorical",       # Single size
+    "numeric",           # CPM bid
+    "numeric",           # Response time in ms
+    "boolean"            # TRUE/FALSE winner
+  ),
+  Expected_Detail = c(
+    "TIMESTAMP_NTZ (UTC event time)",
+    "DATE (UTC calendar date)",
+    "VARCHAR (auction identifier)",
+    "VARCHAR (publisher/site identifier)",
+    "VARCHAR, (device category, string)",
+    "VARCHAR(2) (ISO 2-letter country code)",
+    "VARCHAR(2) (USPS state/region postal code)",
+    "VARCHAR, (city name, string)",
+    "VARCHAR(10) (ZIP or ZIP+4)",
+    "FLOAT (latitude of device)",
+    "FLOAT (longitude of device)",
+    "VARCHAR/ARRAY (all requested sizes, ex: '300x250, 320x50')",
+    "VARCHAR (size for this bid, ex: `300x250')",
+    "NUMBER(12,6) (CPM bid in USD)",
+    "NUMBER(10,0) (bidder latency in ms)",
+    "BOOLEAN (if bid won, TRUE/FALSE)"
+  )
+)
+
+
+expected_types <- expected_types %>%
+  arrange(factor(
+    Expected_Class,
+    levels = c("numeric", "categorical", "datetime", "date", "boolean")
+  ))
+
+expected_types %>%
+  kable(caption = "Expected Variable Types from Data Dictionary") %>%
+  kable_styling(full_width = FALSE,
+                bootstrap_options = c("striped"))
+```
+
+
+We can then compare to the actual type of each variable in the data:
+
+```{r intial-orientation-actual-compare, message=FALSE}
+actual_types <- tibble(
+  Variable = names(bids),
+  Actual_Type = sapply(bids, class)
+)
+
+comparison <- expected_types %>%
+  left_join(actual_types, by = "Variable")
+
+comparison %>%
+  kable(caption = "Expected vs Actual Types (Data Dictionary vs Raw Data)") %>%
+    kable_styling(full_width = FALSE, bootstrap_options = c("striped"))
+```
+
+  Many of these are suspicious or inconsistent with the data dictionary:
+  
+  - **`PRICE`** and **`RESPONSE_TIME`** are expected to be *numeric*, but appear as `character` in the raw data.
+  
+      - This could be due to them containing *non-numeric characters* (i.e., units or extra formatting) and may need parsing before analysis.
+  
+  - **`DEVICE_TYPE`** is expected to be a categorical string with values like "desktop", "mobile", or "tablet", but is stored as an `integer` code.
+      
+      - Without a lookup table, this makes interpretations difficult t understand.
+  
+  - **`DEVICE_GEO_COUNTRY`** appears in the data dictionary but has no detected type in this subset (`NA` in the comparison table).
+    
+      - This indicates that the column is not present in our given data subset.
+  
+  - **`TIMESTAMP`** and **`DATE_UTC`** should be datetime/date fields, but are read in as `character`. 
+  
+      - These will need to be converted before our time-based analysis.
+
+  - **`BID_WON`** is expected to be a Boolean field, but appears as `character`.
+  
+      - It likely needs to be re-coded to `TRUE`/`FALSE` or 0/1.
+
+  - Beyond type mismatches, some fields like **`DEVICE_GEO_REGION`**, **`DEVICE_GEO_CITY`**, and **`DEVICE_GEO_ZIP`** may follow the correct broad class, but need to be analysed carefully for messy real-world values like **inconsistent casing**, **invalid state codes**, or **irregular ZIP formats** during our data cleaning.
+  
+  
+
+  5.  **Two variables** we'd expect to matter most to advertisers are **`PRICE`** and **`SIZE`**:
+  
+    - **`PRICE`** represents the bidder's CPM bid. Understanding pricing patterns helps advertisers optimize bidding strategies, budget appropriately, and assess whether they are overspending or being outbid by competitors.
+    
+    - **`SIZE`** represents the specific ad slot dimensions they are bidding for. Different sized have different performance profiles and market values. Higher-performing or premium sizes may justify higher bids.
+  
 
 ------------------------------------------------------------------------
 
@@ -285,11 +453,223 @@ Guidance:
 -   Consider sorting cities by the measure you plot.
 -   Highlight any cities whose price behavior appears inconsistent or suspicious.
 
-```{r plot-price-region}
-# TODO: your price-by-region plot
+For our plot, we care about:
+
+  - `PRICE` (central measure by city)
+  - `DEVICE_GEO_CITY` (grouping)
+  - `DEVICE_GEO_LAT`, `DEVICE_GEO_LONG` (for map positions)
+
+We first explore these variables to look for suspicious behavior:
+
+```{r price-summary, message=FALSE}
+price_summary <- bids %>%
+  mutate(PRICE_num = parse_number(PRICE)) %>%
+  summarise(
+    n_rows       = n(),
+    min_price    = min(PRICE_num, na.rm = TRUE),
+    max_price    = max(PRICE_num, na.rm = TRUE),
+    n_negative   = sum(PRICE_num < 0, na.rm = TRUE),
+    n_eq_neg999  = sum(PRICE_num == -999, na.rm = TRUE)
+  )
+
+price_summary %>%
+  kable(caption = "Summary of PRICE values before cleaning") %>%
+  kable_styling(full_width = FALSE,
+                bootstrap_options = c("striped"))
 ```
 
-*Interpretation (3–5 sentences):*
+
+  - We see that there are **negative prices**, including a special value of **-999**, so in the cleaning step below we will treat **-999** as missing and convert the remaining negative prices to positive values (assuming they are sign errors). 
+  - We also see a questionably high price for the *max*. Due to the possibility of extreme outliers here, we will use the **median** as a more robust measure of central tendency for our city-level comparison.
+  
+  
+Using Oregon’s approximate bounds (according to "MapsofTheWorld.com"):
+
+- Latitude: **$42^\circ$ N to $46.15^\circ$ N**  
+- Longitude: **$-124.3^\circ$ W to $-116.45^\circ$ W**
+
+```{r lat-long-summary, message=FALSE}
+# Added slight buffers to values
+latlong_summary <- bids %>%
+  summarise(
+    n_rows          = n(),
+    min_lat         = min(DEVICE_GEO_LAT, na.rm = TRUE),
+    max_lat         = max(DEVICE_GEO_LAT, na.rm = TRUE),
+    n_lat_outside   = sum(DEVICE_GEO_LAT < 41    | DEVICE_GEO_LAT > 47,     na.rm = TRUE),
+    min_long        = min(DEVICE_GEO_LONG, na.rm = TRUE),
+    max_long        = max(DEVICE_GEO_LONG, na.rm = TRUE),
+    n_long_outside  = sum(DEVICE_GEO_LONG < -125 | DEVICE_GEO_LONG > -116, na.rm = TRUE),
+    n_long_10_over  = sum(DEVICE_GEO_LONG < -121 & DEVICE_GEO_LONG > -127.5, na.rm = TRUE)
+  )
+
+latlong_summary %>%
+  kable(caption = "Lat/long values compared to approximate Oregon bounds") %>%
+  kable_styling(full_width = FALSE,
+                bootstrap_options = c("striped"))
+```
+  
+  
+  - Exactly 100 of rows have **longitudes** outside Oregon’s expected range (exact 100 implies an added "bomb"). 
+      - We also see that the majority of the points lie about 10 degrees over from these shifted values (tested by checking number of points in small range about 10 degrees away).
+      - However, we cannot be certain that this was the exact shift and since it is only 100 points, we will omit from analysis.
+
+```{r city-summary, message=FALSE}
+city_summary <- bids %>%
+  mutate(
+    PRICE_num = readr::parse_number(PRICE),
+    CITY = if_else(is.na(DEVICE_GEO_CITY), "Unknown", DEVICE_GEO_CITY)
+  ) %>%
+  group_by(CITY) %>%
+  summarise(
+    n            = n(),
+    median_price = median(PRICE_num, na.rm = TRUE),
+    .groups      = "drop"
+  ) %>%
+  arrange(desc(n)) %>%
+  slice_head(n = 10)
+
+city_summary %>%
+  kable(caption = "Top 10 cities by count with median price (pre-cleaning)") %>%
+  kable_styling(full_width = FALSE,
+                bootstrap_options = c("striped"))
+```
+
+  - We see the second largest group is **"Unknown"** (or `NA` in raw data).
+      - Since we are not sure if `NA`/"Unknown" represents multiple underlying locations, we cannot interpret it meaningfully at the city level and we will omit from this visualization.
+      
+      
+We now implement the necessary changes found above and prepare for our plot:
+
+```{r plot-prep, message=FALSE}
+bids_plot <- bids %>%
+  mutate(
+    # Numeric price for analysis
+    PRICE_num = parse_number(PRICE),
+    # Treat -999 as missing
+    PRICE_num = if_else(PRICE_num == -999, NA_real_, PRICE_num),
+    # Flip remaining negatives to positive (assumed sign errors)
+    PRICE_num = if_else(PRICE_num < 0 & !is.na(PRICE_num),
+                        -PRICE_num, PRICE_num),
+    # City label for plotting
+    CITY = if_else(is.na(DEVICE_GEO_CITY), "Unknown", DEVICE_GEO_CITY)
+  ) %>%
+  # Drop rows with missing price or coords
+  filter(
+    !is.na(PRICE_num),
+    !is.na(DEVICE_GEO_LAT),
+    !is.na(DEVICE_GEO_LONG)
+  ) %>%
+  # Keep only points inside (buffered) Oregon bounds
+  filter(DEVICE_GEO_LONG >= -125, DEVICE_GEO_LONG <= -116) %>%
+  # Drop "Unknown" city for city-level comparison
+  filter(CITY != "Unknown")
+
+# City-level summary for plotting
+city_price_map <- bids_plot %>%
+  group_by(CITY) %>%
+  summarise(
+    n            = n(),
+    median_price = median(PRICE_num, na.rm = TRUE),
+    lat          = median(DEVICE_GEO_LAT, na.rm = TRUE),
+    long         = median(DEVICE_GEO_LONG, na.rm = TRUE),
+    .groups      = "drop"
+  ) %>%
+  filter(n >= 100)        # Cities with reasonably large sample size
+
+# Ranges for zooming the map
+lat_range  <- range(city_price_map$lat)
+long_range <- range(city_price_map$long)
+```
+
+
+```{r plot-price-by-city, message=FALSE, warning=FALSE}
+# Load U.S. states map and keep only Oregon
+us_states <- map_data("state")
+oregon_map <- us_states %>% filter(region == "oregon")
+
+# Top cities to label (by bid count)
+label_cities <- city_price_map %>%
+  slice_max(n, n = 7)
+
+# Size breaks for legend (so it doesn't get huge)
+size_breaks <- c(100, 1000, 10000)
+
+ggplot() +
+  # Background of Oregon
+  geom_polygon(
+    data = oregon_map,
+    aes(x = long, y = lat, group = group),
+    fill  = "azure3",
+    color = "gray40",
+    linewidth = 1
+  ) +
+  # City points with median price & count
+  geom_point(
+    data = city_price_map,
+    aes(x = long, y = lat,
+        color = median_price,
+        size  = n),
+    alpha = 0.95
+  ) +
+  # Labels for highest-volume cities
+  geom_text_repel(
+    data = label_cities,
+    aes(x = long, y = lat, label = CITY),
+    size = 4.5,
+    max.overlaps = 20,
+    fontface = "bold",
+    color = "black",
+    bg.color = "lightcyan1",
+    bg.r = 0.1,
+    nudge_x = 1,
+    direction = "y",
+    hjust = 0,
+    segment.color = "gray20",
+    segment.size = 0.6
+    
+  ) +
+  scale_color_viridis_c(
+    option = "plasma",
+    name   = "Median CPM"
+  ) +
+  scale_size_continuous(
+    name  = "Bid Count",
+    range = c(2, 18),
+    breaks = size_breaks,
+    labels = scales::comma(size_breaks),
+    guide = guide_legend(override.aes = list(size = c(3, 6)))
+  ) +
+  coord_fixed(
+    1.3,
+    xlim = long_range,
+    ylim = lat_range
+  ) +
+  labs(
+    title = "Median Bid Price by City",
+    subtitle = "Oregon Cities (at least 100 bids)",
+    x = "Longitude",
+    y = "Latitude"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.background = element_rect(fill = "grey90", color = NA),
+
+    panel.grid = element_line(color = "lightblue3"),
+    legend.position = "left",
+    plot.title.position = "plot",
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle = element_text(size = 13, hjust = 0.5)
+  ) 
+```
+
+**Interpretation:**
+
+This plot shows the **median bid price (CPM)** for ad auction across Oregon cities with at least 100 bids. 
+
+  - Prices cluster tightly across most cities, with typical medians falling between **\$0.15 - \$0.30**, suggesting fairly consistent bidding behavior across the region.
+  - Higher-volume markets (like **Portland**, **Hilsboro**, **Beaverton**, **Salem**, and **Medford**) do not show systematically higher prices and both the highest and lowest median CPM values are seen throughout the state in lower-volume markets. This indicates that auction prices are not strictly tied to city size.
+  - A few cities exhibit noticeably higher or lower medians than their neighbors, which may reflect **localized data quality issues**, **market anomolies**, or **bidder strategy differences**.
+  - Overall, no extremely or structurally suspicious patterns appear after cleaning negative and invalid values and filtering for cities with "reasonable" amount of bids ($>100$).
 
 ------------------------------------------------------------------------
 
@@ -366,9 +746,20 @@ Write 5–8 sentences reflecting on:
 -   One thing you would change next time to improve your process.
 -   Whether and how you used generative AI (if at all), and how it affected your understanding.
 
-*(Write your reflection here.)*  
-Chris:   
+**Chris:**
 1) I enjoyed utilizing the pipe operator combined with the mutate() function to achieve what I needed without needing to alter the original dataset. The parse_number() function was also a very handy addition, specifically for the variables I was working with.  
 2) Having a structured way to answer the questions, as well as a plan to segment out the workload fairly felt easier once it was assigned.   
 3) I mistakenly did not look at the variable types before attempting to create the ResponseTime v. DeviceType graph, so next time a more thorough look at the data will come first.  
 4) I used generative AI lightly to understand where my issues coding my graph were occurring. It didn't end up helping until I stopped and checked the data, which is when my issues made sense and I could fix them.
+
+**Esther:**
+ In this lab, the most useful R tools were the *tidyverse* workflow, particularly `dplyr`, for cleaning suspicious values and `ggplot2`
+for building layered visualizations. Using `parse_number()`, `mutate()`, and grouped summaries made it straight-forward to diagnose issues like negative prices and shifted longitudes.
+Our Git/GitHub workflow continues to progress, with the team understanding and skillsets utilizing branching, pull requests, and reviewer assignments continuing to expand as we progress thorugh this assignment.
+One thing I would improve next time is to have decided on setting up a separate Kanban for this lab earlier on, as this would have helped us track our responsibilities and progress more clearly from the beginning. 
+(However, I think a lot of our work for this lab was pushed closer to this lab's due date due to other work & mideterms, project work, and preparation for the upcoming holiday.)
+
+I used generative AI to help with debugging my plots (I had one line overriding another in my more complicated "Median Price by City" `ggplot2`.). This did not replace understanding, but helped me get through the tedious process of debugging a `ggplot2` plot more easily. 
+On the contrary, I ended up learning a lot of interesting tricks through my attempts at using the AI to find my error.
+
+
