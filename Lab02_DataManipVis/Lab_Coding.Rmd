@@ -375,7 +375,6 @@ Choose only one dimension and describe what you find.
 ```
 
 *(Write your interpretation below.)*
-
 ------------------------------------------------------------------------
 
 ## 2.3 Response Time Behavior
@@ -385,14 +384,20 @@ Investigate the `RESPONSE_TIME` variable.
 Tasks:
 
 1.  Examine its data type and typical values.
+- It takes on the character data type.
+- Typical values include a "RESPONSE TIME:" delimiter, plus some minor variations. It then contains digits that represent response time in milliseconds.
 2.  Look for common patterns or prefixes/suffixes in the values.
+- Typical values include a "RESPONSE TIME:" delimiter.
 3.  Identify an issue that would prevent straightforward numerical analysis.
-
+- It is not of type int, and contains characters within the value. There also exists two edge cases where either the delimiter is different or trailing values beyond the digits.
 ```{r rt-explore}
-# TODO: your code for exploring RESPONSE_TIME
+typeof(bids$RESPONSE_TIME)
+filter(.data=bids, substr(RESPONSE_TIME, 1, 14) != "RESPONSE_TIME:")
+filter(.data=bids, grepl("^[0-9]$", substr(RESPONSE_TIME, nchar(RESPONSE_TIME), nchar(RESPONSE_TIME))) == FALSE)
 ```
 
 *(Write your interpretation below.)*
+There is clear sign of tampering given that there is one off inconsistencies in the delimiter and the trailing characters after the digits. Otherwise, easily reversible.
 
 ------------------------------------------------------------------------
 
@@ -416,12 +421,28 @@ Create a visualization that reveals:
 -   Outliers or impossible values
 -   Any issues you suspect based on the data dictionary
 
-```{r plot-price}
-# TODO: your price distribution plot
+```{r plot-price-1}
+library(ggplot2)
+idx <- which(substr(bids$PRICE, 1, 1)=="O")
+bids$PRICE[idx][1] <- "0"
+altered_price_data <- mutate(.data=bids, PRICE=as.double(PRICE))
+rm(idx)
+altered_price_data <- group_by(.data=altered_price_data, PRICE)
+altered_price_data <- summarize(.data=altered_price_data, count=n())
+ggplot(altered_price_data, aes(x = PRICE, y = count)) + geom_point() + ggtitle("Price Histogram (with outliers)") # With outliers
 ```
 
-*Interpretation (3–5 sentences):*
+```{r plot-price-2}
+altered_price_data <- filter(.data=altered_price_data, PRICE < 25, PRICE > 0)
+ggplot(altered_price_data, aes(x = PRICE)) + geom_histogram(aes(y = ..density..), bins = 200, fill = "lightblue") + stat_function(fun = dexp, args = list(rate = (1 / mean(altered_price_data$PRICE))), color = "red", size = 1) + ggtitle("Price Distribution (Exponential) (without outliers)")# Without outliers
+```
 
+```{r plot-price-3}
+altered_price_data <- filter(.data=altered_price_data, PRICE < 5)
+ggplot(altered_price_data, aes(x = PRICE)) + geom_histogram(aes(y = ..density..), bins = 200, fill = "lightblue") + stat_function(fun = dexp, args = list(rate = (1 / mean(altered_price_data$PRICE))), color = "red", size = 1) + ggtitle("Price Distribution (Exponential) (without outliers and further zoomed in)") # More zoomed in approach
+```
+*Interpretation (3–5 sentences):*
+The most apparent outliers exist in the region where the PRICE is less than -5 and have been removed due to the irretrievable nature of the values of those rows. It has been previously determined that the values that exist between -5 and 0 are rows which have had their PRICE multiplied by -1. Furthermore, we have values above 25 which may not be outliers, but exist in such small quantities that they might as well not exist. Similarly, values beyond 5 can be considered to be negligible. However, given that they aren't inherently deemed outliers, there are two distribution density plots provided which include prices below 25 and below 5 respectively. From the initial histogram, it can be seen that the PRICE roughly follows an exponential distribution, and the distribution density plots in turn slightly reinforce this claim.
 ------------------------------------------------------------------------
 
 ## 3.2 Plot 2 — Price by Zip City
@@ -689,6 +710,15 @@ For each issue:
 -   Suggest one way you would address it in a later **data cleaning** lab.
 
 *(Write your answer here in paragraphs or bullet points.)*
+- PRICE: Negative outlier (-999) values. 
+Shown by first price distribution plot.
+A fix involves removing these values entirely.
+- PRICE: Negative price (between -5 and 0) values.
+Shown by first price distribution plot.
+A fix involves multiplying the negative values where PRICE is between -5 and 0 by -1.
+- RESPONSE_TIME: One-off inconsistent delimiter and one-off trailing characters after digits.
+Shown by 2.3.
+A fix involves correct delimiter and removing the trailing digits.
 
 ------------------------------------------------------------------------
 
@@ -715,7 +745,6 @@ Write 5–8 sentences reflecting on:
 -   One thing you would change next time to improve your process.
 -   Whether and how you used generative AI (if at all), and how it affected your understanding.
 
-
 **Esther:**
  In this lab, the most useful R tools were the *tidyverse* workflow, particularly `dplyr`, for cleaning suspicious values and `ggplot2`
 for building layered visualizations. Using `parse_number()`, `mutate()`, and grouped summaries made it straight-forward to diagnose issues like negative prices and shifted longitudes.
@@ -726,4 +755,6 @@ One thing I would improve next time is to have decided on setting up a separate 
 I used generative AI to help with debugging my plots (I had one line overriding another in my more complicated "Median Price by City" `ggplot2`.). This did not replace understanding, but helped me get through the tedious process of debugging a `ggplot2` plot more easily. 
 On the contrary, I ended up learning a lot of interesting tricks through my attempts at using the AI to find my error.
 
+**Takeshi**
+I believe the functions/methods filter, summarize and mutate were the most useful in the process of identifying errors. For the more complicated errors, utilizing more niche functions provided great support in my exploration for these errors. The overall structure of commiting and putting in a pull request has been beneficial to keep the main branch looking clean. I would spend more time studying the functions on other data sets if possible to familiarize myself with them more. I did use generative AI (mostly chatGPT) in order to query the existence of certain functions that I would of otherwise had to code around if they had not existed. Furthermore, I had utilized chatGPT to generate formats for which I plotted data on. Personally, I believe that the use of AI had sped up the process of completing this lab, but I do believe that struggling a little more may have been beneficial to a greater understanding and ability to recall the certain existances of functions (I found myself sometimes asking the same question, but for the most part, I found myself relying on AI less later in the process of doing the main project, and this lab).
 
