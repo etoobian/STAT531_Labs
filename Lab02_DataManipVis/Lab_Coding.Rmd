@@ -136,9 +136,9 @@ Your code and reasoning must reflect **your own team’s understanding**.
 ```{r load-data}
 # TODO: Load packages and data here
 # Example structure (adjust paths/names to match the repo):
-# library(tidyverse)
-# library(arrow)
-# bids <- read_parquet("data/bids_data_vDTR.parquet")
+library(tidyverse)
+library(arrow)
+bids <- read_parquet("../data/bids_data_vDTR.parquet")
 # glimpse(bids)
 ```
 
@@ -257,18 +257,20 @@ bids$PRICE[idx][1] <- "0"
 altered_price_data <- mutate(.data=bids, PRICE=as.double(PRICE))
 rm(idx)
 altered_price_data <- group_by(.data=altered_price_data, PRICE)
-altered_price_data <- summarize(.data=altered_price_data, count=n())
-ggplot(altered_price_data, aes(x = PRICE, y = count)) + geom_point() + ggtitle("Price Histogram (with outliers)") # With outliers
+altered_price_data <- summarize(.data=altered_price_data, Count=n())
+ggplot(altered_price_data, aes(x = PRICE, y = Count)) + geom_point() + ggtitle("Price Histogram (with outliers)") + labs(x="Price") + theme_bw() # With outliers
 ```
 
 ```{r plot-price-2}
-altered_price_data <- filter(.data=altered_price_data, PRICE < 25, PRICE > 0)
-ggplot(altered_price_data, aes(x = PRICE)) + geom_histogram(aes(y = ..density..), bins = 200, fill = "lightblue") + stat_function(fun = dexp, args = list(rate = (1 / mean(altered_price_data$PRICE))), color = "red", size = 1) + ggtitle("Price Distribution (Exponential) (without outliers)")# Without outliers
+altered_price_data_1 <- filter(.data=altered_price_data, PRICE < 25, PRICE > 0)
+ggplot(filter(.data=altered_price_data_1 , PRICE < 25, PRICE > 0), aes(x = PRICE)) + geom_histogram(aes(y = ..density..), bins = 200, fill = "lightblue") + stat_function(fun = dexp, args = list(rate = (1 / mean(altered_price_data_1 $PRICE))), color = "red", size = 1) + ggtitle("Price Distribution (Exponential) (without outliers)") + labs(x = "Price", y = "Density") + theme_bw() # Without outliers
+rm(altered_price_data_1)
 ```
 
 ```{r plot-price-3}
-altered_price_data <- filter(.data=altered_price_data, PRICE < 5)
-ggplot(altered_price_data, aes(x = PRICE)) + geom_histogram(aes(y = ..density..), bins = 200, fill = "lightblue") + stat_function(fun = dexp, args = list(rate = (1 / mean(altered_price_data$PRICE))), color = "red", size = 1) + ggtitle("Price Distribution (Exponential) (without outliers and further zoomed in)") # More zoomed in approach
+altered_price_data_2 <- filter(.data=altered_price_data, PRICE> 0, PRICE < 5)
+ggplot(altered_price_data_2, aes(x = PRICE)) + geom_histogram(aes(y = ..density..), bins = 200, fill = "lightblue") + stat_function(fun = dexp, args = list(rate = (1 / mean(altered_price_data_2$PRICE))), color = "red", size = 1) + ggtitle("Price Distribution (Exponential) (without outliers and further zoomed in)") + labs(x = "Price", y = "Density") + theme_bw() # More zoomed in approach
+rm(altered_price_data_2, altered_price_data)
 ```
 *Interpretation (3–5 sentences):*
 The most apparent outliers exist in the region where the PRICE is less than -5 and have been removed due to the irretrievable nature of the values of those rows. It has been previously determined that the values that exist between -5 and 0 are rows which have had their PRICE multiplied by -1. Furthermore, we have values above 25 which may not be outliers, but exist in such small quantities that they might as well not exist. Similarly, values beyond 5 can be considered to be negligible. However, given that they aren't inherently deemed outliers, there are two distribution density plots provided which include prices below 25 and below 5 respectively. From the initial histogram, it can be seen that the PRICE roughly follows an exponential distribution, and the distribution density plots in turn slightly reinforce this claim.
