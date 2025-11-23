@@ -142,6 +142,10 @@ library(readr)
 library(tibble)
 library(knitr)
 library(kableExtra)
+library(forcats)
+library(maps)
+library(viridis)
+library(ggrepel)
 bids <- read_parquet("../data/bids_data_vDTR.parquet")
 ```
 
@@ -326,7 +330,6 @@ comparison %>%
     - **`SIZE`** represents the specific ad slot dimensions they are bidding for. Different sized have different performance profiles and market values. Higher-performing or premium sizes may justify higher bids.
   
 
-
 ------------------------------------------------------------------------
 
 # 2. Data Exploration Using `dplyr` (30–40 minutes)
@@ -431,11 +434,223 @@ Guidance:
 -   Consider sorting cities by the measure you plot.
 -   Highlight any cities whose price behavior appears inconsistent or suspicious.
 
-```{r plot-price-region}
-# TODO: your price-by-region plot
+For our plot, we care about:
+
+  - `PRICE` (central measure by city)
+  - `DEVICE_GEO_CITY` (grouping)
+  - `DEVICE_GEO_LAT`, `DEVICE_GEO_LONG` (for map positions)
+
+We first explore these variables to look for suspicious behavior:
+
+```{r price-summary, message=FALSE}
+price_summary <- bids %>%
+  mutate(PRICE_num = parse_number(PRICE)) %>%
+  summarise(
+    n_rows       = n(),
+    min_price    = min(PRICE_num, na.rm = TRUE),
+    max_price    = max(PRICE_num, na.rm = TRUE),
+    n_negative   = sum(PRICE_num < 0, na.rm = TRUE),
+    n_eq_neg999  = sum(PRICE_num == -999, na.rm = TRUE)
+  )
+
+price_summary %>%
+  kable(caption = "Summary of PRICE values before cleaning") %>%
+  kable_styling(full_width = FALSE,
+                bootstrap_options = c("striped"))
 ```
 
-*Interpretation (3–5 sentences):*
+
+  - We see that there are **negative prices**, including a special value of **-999**, so in the cleaning step below we will treat **-999** as missing and convert the remaining negative prices to positive values (assuming they are sign errors). 
+  - We also see a questionably high price for the *max*. Due to the possibility of extreme outliers here, we will use the **median** as a more robust measure of central tendency for our city-level comparison.
+  
+  
+Using Oregon’s approximate bounds (according to "MapsofTheWorld.com"):
+
+- Latitude: **$42^\circ$ N to $46.15^\circ$ N**  
+- Longitude: **$-124.3^\circ$ W to $-116.45^\circ$ W**
+
+```{r lat-long-summary, message=FALSE}
+# Added slight buffers to values
+latlong_summary <- bids %>%
+  summarise(
+    n_rows          = n(),
+    min_lat         = min(DEVICE_GEO_LAT, na.rm = TRUE),
+    max_lat         = max(DEVICE_GEO_LAT, na.rm = TRUE),
+    n_lat_outside   = sum(DEVICE_GEO_LAT < 41    | DEVICE_GEO_LAT > 47,     na.rm = TRUE),
+    min_long        = min(DEVICE_GEO_LONG, na.rm = TRUE),
+    max_long        = max(DEVICE_GEO_LONG, na.rm = TRUE),
+    n_long_outside  = sum(DEVICE_GEO_LONG < -125 | DEVICE_GEO_LONG > -116, na.rm = TRUE),
+    n_long_10_over  = sum(DEVICE_GEO_LONG < -121 & DEVICE_GEO_LONG > -127.5, na.rm = TRUE)
+  )
+
+latlong_summary %>%
+  kable(caption = "Lat/long values compared to approximate Oregon bounds") %>%
+  kable_styling(full_width = FALSE,
+                bootstrap_options = c("striped"))
+```
+  
+  
+  - Exactly 100 of rows have **longitudes** outside Oregon’s expected range (exact 100 implies an added "bomb"). 
+      - We also see that the majority of the points lie about 10 degrees over from these shifted values (tested by checking number of points in small range about 10 degrees away).
+      - However, we cannot be certain that this was the exact shift and since it is only 100 points, we will omit from analysis.
+
+```{r city-summary, message=FALSE}
+city_summary <- bids %>%
+  mutate(
+    PRICE_num = readr::parse_number(PRICE),
+    CITY = if_else(is.na(DEVICE_GEO_CITY), "Unknown", DEVICE_GEO_CITY)
+  ) %>%
+  group_by(CITY) %>%
+  summarise(
+    n            = n(),
+    median_price = median(PRICE_num, na.rm = TRUE),
+    .groups      = "drop"
+  ) %>%
+  arrange(desc(n)) %>%
+  slice_head(n = 10)
+
+city_summary %>%
+  kable(caption = "Top 10 cities by count with median price (pre-cleaning)") %>%
+  kable_styling(full_width = FALSE,
+                bootstrap_options = c("striped"))
+```
+
+  - We see the second largest group is **"Unknown"** (or `NA` in raw data).
+      - Since we are not sure if `NA`/"Unknown" represents multiple underlying locations, we cannot interpret it meaningfully at the city level and we will omit from this visualization.
+      
+      
+We now implement the necessary changes found above and prepare for our plot:
+
+```{r plot-prep, message=FALSE}
+bids_plot <- bids %>%
+  mutate(
+    # Numeric price for analysis
+    PRICE_num = parse_number(PRICE),
+    # Treat -999 as missing
+    PRICE_num = if_else(PRICE_num == -999, NA_real_, PRICE_num),
+    # Flip remaining negatives to positive (assumed sign errors)
+    PRICE_num = if_else(PRICE_num < 0 & !is.na(PRICE_num),
+                        -PRICE_num, PRICE_num),
+    # City label for plotting
+    CITY = if_else(is.na(DEVICE_GEO_CITY), "Unknown", DEVICE_GEO_CITY)
+  ) %>%
+  # Drop rows with missing price or coords
+  filter(
+    !is.na(PRICE_num),
+    !is.na(DEVICE_GEO_LAT),
+    !is.na(DEVICE_GEO_LONG)
+  ) %>%
+  # Keep only points inside (buffered) Oregon bounds
+  filter(DEVICE_GEO_LONG >= -125, DEVICE_GEO_LONG <= -116) %>%
+  # Drop "Unknown" city for city-level comparison
+  filter(CITY != "Unknown")
+
+# City-level summary for plotting
+city_price_map <- bids_plot %>%
+  group_by(CITY) %>%
+  summarise(
+    n            = n(),
+    median_price = median(PRICE_num, na.rm = TRUE),
+    lat          = median(DEVICE_GEO_LAT, na.rm = TRUE),
+    long         = median(DEVICE_GEO_LONG, na.rm = TRUE),
+    .groups      = "drop"
+  ) %>%
+  filter(n >= 100)        # Cities with reasonably large sample size
+
+# Ranges for zooming the map
+lat_range  <- range(city_price_map$lat)
+long_range <- range(city_price_map$long)
+```
+
+
+```{r plot-price-by-city, message=FALSE, warning=FALSE}
+# Load U.S. states map and keep only Oregon
+us_states <- map_data("state")
+oregon_map <- us_states %>% filter(region == "oregon")
+
+# Top cities to label (by bid count)
+label_cities <- city_price_map %>%
+  slice_max(n, n = 7)
+
+# Size breaks for legend (so it doesn't get huge)
+size_breaks <- c(100, 1000, 10000)
+
+ggplot() +
+  # Background of Oregon
+  geom_polygon(
+    data = oregon_map,
+    aes(x = long, y = lat, group = group),
+    fill  = "azure3",
+    color = "gray40",
+    linewidth = 1
+  ) +
+  # City points with median price & count
+  geom_point(
+    data = city_price_map,
+    aes(x = long, y = lat,
+        color = median_price,
+        size  = n),
+    alpha = 0.95
+  ) +
+  # Labels for highest-volume cities
+  geom_text_repel(
+    data = label_cities,
+    aes(x = long, y = lat, label = CITY),
+    size = 4.5,
+    max.overlaps = 20,
+    fontface = "bold",
+    color = "black",
+    bg.color = "lightcyan1",
+    bg.r = 0.1,
+    nudge_x = 1,
+    direction = "y",
+    hjust = 0,
+    segment.color = "gray20",
+    segment.size = 0.6
+    
+  ) +
+  scale_color_viridis_c(
+    option = "plasma",
+    name   = "Median CPM"
+  ) +
+  scale_size_continuous(
+    name  = "Bid Count",
+    range = c(2, 18),
+    breaks = size_breaks,
+    labels = scales::comma(size_breaks),
+    guide = guide_legend(override.aes = list(size = c(3, 6)))
+  ) +
+  coord_fixed(
+    1.3,
+    xlim = long_range,
+    ylim = lat_range
+  ) +
+  labs(
+    title = "Median Bid Price by City",
+    subtitle = "Oregon Cities (at least 100 bids)",
+    x = "Longitude",
+    y = "Latitude"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    panel.background = element_rect(fill = "grey90", color = NA),
+
+    panel.grid = element_line(color = "lightblue3"),
+    legend.position = "left",
+    plot.title.position = "plot",
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle = element_text(size = 13, hjust = 0.5)
+  ) 
+```
+
+**Interpretation:**
+
+This plot shows the **median bid price (CPM)** for ad auction across Oregon cities with at least 100 bids. 
+
+  - Prices cluster tightly across most cities, with typical medians falling between **\$0.15 - \$0.30**, suggesting fairly consistent bidding behavior across the region.
+  - Higher-volume markets (like **Portland**, **Hilsboro**, **Beaverton**, **Salem**, and **Medford**) do not show systematically higher prices and both the highest and lowest median CPM values are seen throughout the state in lower-volume markets. This indicates that auction prices are not strictly tied to city size.
+  - A few cities exhibit noticeably higher or lower medians than their neighbors, which may reflect **localized data quality issues**, **market anomolies**, or **bidder strategy differences**.
+  - Overall, no extremely or structurally suspicious patterns appear after cleaning negative and invalid values and filtering for cities with "reasonable" amount of bids ($>100$).
 
 ------------------------------------------------------------------------
 
@@ -499,6 +714,3 @@ Write 5–8 sentences reflecting on:
 -   What worked well in your Git/gitHub workflow and team collaboration.
 -   One thing you would change next time to improve your process.
 -   Whether and how you used generative AI (if at all), and how it affected your understanding.
-
-*(Write your reflection here.)*
-
