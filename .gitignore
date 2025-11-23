@@ -22,4 +22,4 @@ Thumbs.db
 *.parquet
 
 # Ignore any data stored inside the Project/data folder
-Project/data/*
+data/*
