@@ -91,7 +91,7 @@ Upload a screenshot (I'll check the time and date of the file) of the Kanban boa
 -   Save it in your repository under: `planning/kanban_screenshot.png`
 
 -   Add it **here**.
-
+![Kanban Planning Board](planning/kanban_screenshot.png)
 Make use of the team charter that you designed in Lab01, using the Kanban board throughout the project to keep you on task, correcting issues that arise and readjusting as needed.
 
 
@@ -134,12 +134,13 @@ Your code and reasoning must reflect **your own team’s understanding**.
 6.  Load `tidyverse`, `ggplot2` and any other packages you find useful (`arrow`, `lubridate`, etc.)
 
 ```{r load-data}
-# TODO: Load packages and data here
-# Example structure (adjust paths/names to match the repo):
-# library(tidyverse)
-# library(arrow)
-# bids <- read_parquet("data/bids_data_vDTR.parquet")
-# glimpse(bids)
+# Load packages and data
+library(tidyverse)
+library(dplyr)
+library(arrow)
+library(ggplot2)
+library(readr)
+bids <- read_parquet("../data/bids_data_vDTR.parquet")
 ```
 
 ------------------------------------------------------------------------
@@ -157,7 +158,6 @@ Answer the following in complete sentences. Use code chunks to support your answ
     -   suspicious or inconsistent with the dictionary?
 4.  Name **two variables** you expect to matter most to advertisers and explain why.
 
-*(Write your answers below.)*
 
 ------------------------------------------------------------------------
 
