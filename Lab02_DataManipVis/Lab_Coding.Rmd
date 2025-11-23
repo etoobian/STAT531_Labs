@@ -714,3 +714,16 @@ Write 5–8 sentences reflecting on:
 -   What worked well in your Git/gitHub workflow and team collaboration.
 -   One thing you would change next time to improve your process.
 -   Whether and how you used generative AI (if at all), and how it affected your understanding.
+
+
+**Esther:**
+ In this lab, the most useful R tools were the *tidyverse* workflow, particularly `dplyr`, for cleaning suspicious values and `ggplot2`
+for building layered visualizations. Using `parse_number()`, `mutate()`, and grouped summaries made it straight-forward to diagnose issues like negative prices and shifted longitudes.
+Our Git/GitHub workflow continues to progress, with the team understanding and skillsets utilizing branching, pull requests, and reviewer assignments continuing to expand as we progress thorugh this assignment.
+One thing I would improve next time is to have decided on setting up a separate Kanban for this lab earlier on, as this would have helped us track our responsibilities and progress more clearly from the beginning. 
+(However, I think a lot of our work for this lab was pushed closer to this lab's due date due to other work & mideterms, project work, and preparation for the upcoming holiday.)
+
+I used generative AI to help with debugging my plots (I had one line overriding another in my more complicated "Median Price by City" `ggplot2`.). This did not replace understanding, but helped me get through the tedious process of debugging a `ggplot2` plot more easily. 
+On the contrary, I ended up learning a lot of interesting tricks through my attempts at using the AI to find my error.
+
+
