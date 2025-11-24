@@ -348,10 +348,29 @@ Tasks:
 3.  Identify **at least one** region code that is clearly suspicious, and explain why.
 
 ```{r geo-explore}
-# TODO: your code for geographic exploration
+## Mostly utilizing the functions count() and slice_max().
+## The sort=TRUE argument and slice_max() overlap in utility slightly, but 
+## good to remember they both exist.
+
+# Table with top 3 regions
+bids %>% count(DEVICE_GEO_REGION, sort = TRUE) %>%
+  slice_max(n, n = 3)
+  
+# Table with top 10 cities
+bids %>%
+  count(DEVICE_GEO_CITY, sort = TRUE) %>%
+  slice_max(n, n = 10)
+
+# Checking out all region codes
+bids %>%
+  count(DEVICE_GEO_REGION, sort = TRUE)
+
 ```
 
-*(Write your interpretation below.)*
+*Interpretation:*
+The top 3 regions are seeming to all refer to Oregon, though the spelling is inconsistent and breaks the entries into unnecessary groupings. The top 10 cities table is well spread out, though the second most entries being connected to an NA value. When cleaning the data, we may find that the NA values can be linked to specific cities based on other variables such as Latitude, Longitude, or Zip Code, allowing this table to make more interpretive sense.
+
+The data dictionary states the values should be a exactly two-characters, written as a USPS code. In this case, two of the codes that appear are distinctly larger than two characters (oregon, and xor). The region code I find to be clearly suspicious is xor, as it is unclear if the x is a typo or if the value is intended to be something different than Oregon. The entry "oregon" should not be an issue after the cleaning stage, as we can simply change those values to "OR".
 
 ------------------------------------------------------------------------
 
@@ -691,11 +710,23 @@ Possible ideas:
 
 Your plot should answer a clear question, and your interpretation should explain what you learned.
 
-```{r plot-analyst-choice}
-# TODO: your analyst's choice plot
+```{r Device vs Response Time plot}
+## This is a boxplot that represents Response Time by Device Type.
+bids %>%
+  mutate(RESPONSE_TIME = parse_number(RESPONSE_TIME)) %>% # Removing chars from RESPONSE_TIME variable
+  mutate(DEVICE_TYPE = factor(DEVICE_TYPE)) %>% # Setting DEVICE_TYPE as a factor
+  ggplot(aes(x = DEVICE_TYPE, y = RESPONSE_TIME, fill = DEVICE_TYPE)) + # Plotting the BoxPlot and labels
+  geom_boxplot(outlier.size = 0.7) +
+  labs(
+    title = "Response Time by Device Type",
+    x = "Device Type",
+    y = "Response Time (ms)"
+  )
+
 ```
 
-*Interpretation (3–5 sentences):*
+*Interpretation:*
+Does Response Time vary based on the type of device? This box plot depicts bidder response latency across the various device types in the data. The device type variable is mislabeled, causing the specific categories to be unidentified. We can see, however, that the median response values for each device are closely grouped, with devices 4 and 5 having slightly slower medians than the others. Device 2 has a wider inner quartile range, showing that its values have more spread around the median. Additionally, device 4 shows a significant number of outlier values much higher than the other 4 devices. This could imply that, while the median is still low, there is some issue of latency for that device. If we can correctly identify which category corresponds to which device, this boxplot implies there could be differences between the devices with regard to response time.
 
 ------------------------------------------------------------------------
 
@@ -746,6 +777,12 @@ Write 5–8 sentences reflecting on:
 -   What worked well in your Git/gitHub workflow and team collaboration.
 -   One thing you would change next time to improve your process.
 -   Whether and how you used generative AI (if at all), and how it affected your understanding.
+
+**Chris:**
+1) I enjoyed utilizing the pipe operator combined with the mutate() function to achieve what I needed without needing to alter the original dataset. The parse_number() function was also a very handy addition, specifically for the variables I was working with.  
+2) Having a structured way to answer the questions, as well as a plan to segment out the workload fairly felt easier once it was assigned.   
+3) I mistakenly did not look at the variable types before attempting to create the ResponseTime v. DeviceType graph, so next time a more thorough look at the data will come first.  
+4) I used generative AI lightly to understand where my issues coding my graph were occurring. It didn't end up helping until I stopped and checked the data, which is when my issues made sense and I could fix them.
 
 **Esther:**
  In this lab, the most useful R tools were the *tidyverse* workflow, particularly `dplyr`, for cleaning suspicious values and `ggplot2`
