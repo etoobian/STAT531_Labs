@@ -1,10 +1,6 @@
 ---
 title: "Lab02: Data Manipulation and Visualization with R"
-<<<<<<< HEAD
-author: "TECK"
-=======
 author: "TECK Squad (Formerly KTC)"
->>>>>>> origin/main
 output:
   html_document:
     toc: true
@@ -142,21 +138,7 @@ Your code and reasoning must reflect **your own team’s understanding**.
 6.  Load `tidyverse`, `ggplot2` and any other packages you find useful (`arrow`, `lubridate`, etc.)
 
 ```{r load-data}
-<<<<<<< HEAD
-# Load packages
-library(tidyverse)
-library(arrow)
 
-# Load main data set from the repo's data/ folder
-bids <- read_parquet("../data/bids_data_vDTR.parquet")
-
-# Work with a copy called df
-df <- bids
-
-# Quick preview of the data
-glimpse(df)
-
-=======
 # Load packages and data
 library(tidyverse)
 library(dplyr)
@@ -171,7 +153,13 @@ library(maps)
 library(viridis)
 library(ggrepel)
 bids <- read_parquet("../data/bids_data_vDTR.parquet")
->>>>>>> origin/main
+
+# Work with a copy called df
+df <- bids
+
+# Quick preview of the data
+glimpse(df)
+
 ```
 
 ------------------------------------------------------------------------
@@ -463,14 +451,12 @@ head(zip_price, 10)
 ```
 
 *(Write your interpretation below.)*
-<<<<<<< HEAD
+
 With a mean near 0.48 and a median of about 0.20, our numerical summaries demonstrate that the majority of bid prices are modest and positive.  Nevertheless, a non-trivial number of implausible values, including zeros, negative numbers, and incredibly low prices below 0.001, are also observed.  We treated 0, −999, and extremely low prices as problematic because these values are probably data entry or coding errors rather than actual auction prices.
 
 Suspiciously high prices tend to concentrate in a small number of ZIP codes when prices are grouped by ZIP code.  The median and maximum prices of a small subset of ZIP codes are significantly higher than those of the entire dataset.  This implies that certain areas might have systematic problems with data quality (such as inaccurate units or misrecorded bids), and these ZIP codes ought to be thoroughly examined in subsequent cleaning or modeling stages.
-=======
->>>>>>> origin/main
-------------------------------------------------------------------------
 
+------------------------------------------------------------------------
 ## 2.3 Response Time Behavior
 
 Investigate the `RESPONSE_TIME` variable.
@@ -515,33 +501,6 @@ Create a visualization that reveals:
 -   Outliers or impossible values
 -   Any issues you suspect based on the data dictionary
 
-<<<<<<< HEAD
-```{r plot-price}
-library(ggplot2)
-library(dplyr)
-
-# Start with cleaned numeric price column
-df_price <- df %>%
-  mutate(
-    PRICE_num = suppressWarnings(as.numeric(PRICE)),
-    PRICE_num = ifelse(PRICE_num < 0 | PRICE_num > 200, NA, PRICE_num) # optional cleaning
-  )
-
-# Plot histogram
-ggplot(df_price, aes(x = PRICE_num)) +
-  geom_histogram(bins = 50) +
-  labs(
-    title = "Distribution of Cleaned Bid Prices",
-    x = "PRICE (numeric)",
-    y = "Count"
-  ) +
-  theme_minimal()
-
-```
-
-*Interpretation (3–5 sentences):*
-The majority of bids are concentrated at extremely low price points, and the distribution of cleaned bid prices is strongly skewed to the right.  A few exceptionally high prices show up as obvious outliers, which could be the result of incorrect data entry or the use of different units.  Extremely high values may raise suspicions because the data dictionary states that prices should typically fall within a reasonable range.  Overall, the distribution has a long tail and a lot of small bids, which is normal for online auction markets but still needs to be cleaned up.
-=======
 ```{r plot-price-1}
 library(ggplot2)
 idx <- which(substr(bids$PRICE, 1, 1)=="O")
@@ -566,7 +525,7 @@ rm(altered_price_data_2, altered_price_data)
 ```
 *Interpretation (3–5 sentences):*
 The most apparent outliers exist in the region where the PRICE is less than -5 and have been removed due to the irretrievable nature of the values of those rows. It has been previously clarified (between me and Adam) that the values that exist between -5 and 0 are rows which have had their PRICE multiplied by -1 (which means that they can be retrieved). Furthermore, we have values above 25 which may not be outliers, but exist in such small quantities that they might as well not exist. Similarly, values beyond 5 can be considered to be negligible. However, given that they aren't inherently deemed outliers, there are two distribution density plots provided which include prices below 25 and below 5 respectively. From the initial histogram, it can be seen that the PRICE roughly follows an exponential distribution, and the distribution density plots in turn slightly reinforce this claim.
->>>>>>> origin/main
+
 ------------------------------------------------------------------------
 
 ## 3.2 Plot 2 — Price by Zip City
@@ -579,47 +538,6 @@ Guidance:
 -   Consider sorting cities by the measure you plot.
 -   Highlight any cities whose price behavior appears inconsistent or suspicious.
 
-<<<<<<< HEAD
-```{r plot-price-region}
-library(dplyr)
-library(ggplot2)
-
-# Use the cleaned PRICE_num we created before
-# Summarize price by city
-city_price <- df_price %>%
-  filter(
-    !is.na(PRICE_num),
-    !is.na(DEVICE_GEO_CITY)
-  ) %>%
-  group_by(DEVICE_GEO_CITY) %>%
-  summarize(
-    n_obs        = n(),
-    median_price = median(PRICE_num),
-    mean_price   = mean(PRICE_num)
-  ) %>%
-  # keep only cities with enough data (e.g., at least 50 bids)
-  filter(n_obs >= 50) %>%
-  arrange(desc(median_price)) %>%
-  slice_head(n = 15)   # top 15 cities by median price
-
-# Bar plot of median price by city
-ggplot(city_price,
-       aes(x = reorder(DEVICE_GEO_CITY, median_price),
-           y = median_price)) +
-  geom_col() +
-  coord_flip() +
-  labs(
-    title = "Median cleaned bid price by city (top 15)",
-    x = "City",
-    y = "Median cleaned PRICE"
-  ) +
-  theme_minimal()
-
-```
-
-*Interpretation (3–5 sentences):*
-The top cities are displayed in the plot according to the median cleaned bid price.  A few cities stand out with noticeably higher median prices, but the majority of cities have comparatively similar median prices.  These more expensive cities might represent truly more valuable ad markets, but they might also point to issues with the quality of the data (such as different units or incorrectly coded bids).  These patterns are based on a sizable number of observations because we only included cities with at least 50 bids.  It would be crucial to determine whether these expensive cities also exhibit other questionable trends in the data in subsequent analysis.
-=======
 For our plot, we care about:
 
   - `PRICE` (central measure by city)
@@ -837,7 +755,7 @@ This plot shows the **median bid price (CPM)** for ad auction across Oregon citi
   - Higher-volume markets (like **Portland**, **Hilsboro**, **Beaverton**, **Salem**, and **Medford**) do not show systematically higher prices and both the highest and lowest median CPM values are seen throughout the state in lower-volume markets. This indicates that auction prices are not strictly tied to city size.
   - A few cities exhibit noticeably higher or lower medians than their neighbors, which may reflect **localized data quality issues**, **market anomolies**, or **bidder strategy differences**.
   - Overall, no extremely or structurally suspicious patterns appear after cleaning negative and invalid values and filtering for cities with "reasonable" amount of bids ($>100$).
->>>>>>> origin/main
+
 
 ------------------------------------------------------------------------
 
@@ -855,7 +773,7 @@ Possible ideas:
 
 Your plot should answer a clear question, and your interpretation should explain what you learned.
 
-<<<<<<< HEAD
+
 ```{r plot-analyst-choice}
 
 library(dplyr)
@@ -896,7 +814,7 @@ ggplot(device_price,
 
 *Interpretation (3–5 sentences):*
 The median bid price for various device types is displayed in this graphic.  Stronger advertiser demand or higher-value impressions on particular platforms are indicated by the significantly higher median prices of some device categories.  In the meantime, a number of device types exhibit extremely low median values, which may indicate different auction dynamics or lower-quality traffic.  These variations suggest that device type should be taken into account in downstream modeling since it has a significant impact on auction pricing.
-=======
+
 ```{r Device vs Response Time plot}
 ## This is a boxplot that represents Response Time by Device Type.
 bids %>%
@@ -914,7 +832,7 @@ bids %>%
 
 *Interpretation:*
 Does Response Time vary based on the type of device? This box plot depicts bidder response latency across the various device types in the data. The device type variable is mislabeled, causing the specific categories to be unidentified. We can see, however, that the median response values for each device are closely grouped, with devices 4 and 5 having slightly slower medians than the others. Device 2 has a wider inner quartile range, showing that its values have more spread around the median. Additionally, device 4 shows a significant number of outlier values much higher than the other 4 devices. This could imply that, while the median is still low, there is some issue of latency for that device. If we can correctly identify which category corresponds to which device, this boxplot implies there could be differences between the devices with regard to response time.
->>>>>>> origin/main
+
 
 ------------------------------------------------------------------------
 
@@ -986,4 +904,9 @@ On the contrary, I ended up learning a lot of interesting tricks through my atte
 
 **Takeshi**
 I believe the functions/methods filter, summarize and mutate were the most useful in the process of identifying errors. For the more complicated errors, utilizing more niche functions provided great support in my exploration for these errors. The overall structure of commiting and putting in a pull request has been beneficial to keep the main branch looking clean. I would spend more time studying the functions on other data sets if possible to familiarize myself with them more. I did use generative AI (mostly chatGPT) in order to query the existence of certain functions that I would of otherwise had to code around if they had not existed. Furthermore, I had utilized chatGPT to generate formats for which I plotted data on. Personally, I believe that the use of AI had sped up the process of completing this lab, but I do believe that struggling a little more may have been beneficial to a greater understanding and ability to recall the certain existances of functions (I found myself sometimes asking the same question, but for the most part, I found myself relying on AI less later in the process of doing the main project, and this lab).
+
+**Khloud:**
+Using ggplot2 for visualization and dplyr for data cleaning proved to be very beneficial in streamlining my workflow during this lab.  The process felt organized and doable after loading the dataset, carefully cleaning each variable, and then making targeted plots. At first, using Git and GitHub was difficult, particularly when it came to branches and pull requests. However, working with my team prevented conflicts and improved the workflow.
+Throughout the lab, I encountered a number of challenges, and I frequently relied on my teammates to identify mistakes and resolve problems, particularly when handling file paths, Git commands, and inconsistent data.  Their assistance was crucial to my progress.  Additionally, I used generative AI as a learning tool to help me understand R functions, explain error messages, and walk me through difficult steps—not to write the analysis for me.  My comprehension and confidence when using the tools were enhanced by the combination of teamwork and AI support.
+In order to solve issues more quickly and move through the workflow more easily, I would like to practice Git and R more independently in the future.
 
