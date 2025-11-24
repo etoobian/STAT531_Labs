@@ -457,6 +457,7 @@ With a mean near 0.48 and a median of about 0.20, our numerical summaries demons
 Suspiciously high prices tend to concentrate in a small number of ZIP codes when prices are grouped by ZIP code.  The median and maximum prices of a small subset of ZIP codes are significantly higher than those of the entire dataset.  This implies that certain areas might have systematic problems with data quality (such as inaccurate units or misrecorded bids), and these ZIP codes ought to be thoroughly examined in subsequent cleaning or modeling stages.
 
 ------------------------------------------------------------------------
+
 ## 2.3 Response Time Behavior
 
 Investigate the `RESPONSE_TIME` variable.
@@ -464,11 +465,17 @@ Investigate the `RESPONSE_TIME` variable.
 Tasks:
 
 1.  Examine its data type and typical values.
+
 - It takes on the character data type.
+
 - Typical values include a "RESPONSE TIME:" delimiter, plus some minor variations. It then contains digits that represent response time in milliseconds.
+
 2.  Look for common patterns or prefixes/suffixes in the values.
+
 - Typical values include a "RESPONSE TIME:" delimiter.
+
 3.  Identify an issue that would prevent straightforward numerical analysis.
+
 - It is not of type int, and contains characters within the value. There also exists two edge cases where either the delimiter is different or trailing values beyond the digits.
 ```{r rt-explore}
 typeof(bids$RESPONSE_TIME)
@@ -849,15 +856,24 @@ For each issue:
 -   Suggest one way you would address it in a later **data cleaning** lab.
 
 *(Write your answer here in paragraphs or bullet points.)*
-- PRICE: Negative outlier (-999) values. 
-Shown by first price distribution plot.
-A fix involves removing these values entirely.
-- PRICE: Negative price (between -5 and 0) values.
-Shown by first price distribution plot.
-A fix involves multiplying the negative values where PRICE is between -5 and 0 by -1.
-- RESPONSE_TIME: One-off inconsistent delimiter and one-off trailing characters after digits.
-Shown by 2.3.
-A fix involves correct delimiter and removing the trailing digits.
+
+PRICE: Negative outlier (-999) values. 
+
+- Shown by first price distribution plot.
+
+- A fix involves removing these values entirely.
+
+PRICE: Negative price (between -5 and 0) values.
+
+- Shown by first price distribution plot.
+
+- A fix involves multiplying the negative values where PRICE is between -5 and 0 by -1.
+
+RESPONSE_TIME: One-off inconsistent delimiter and one-off trailing characters after digits.
+
+- Shown by 2.3. 
+
+- A fix involves correct delimiter and removing the trailing digits.
 
 ------------------------------------------------------------------------
 
@@ -875,6 +891,7 @@ Which issues are most critical to fix before building models, and why?
 Downstream analytics are significantly impacted by the data quality problems found in PRICE, including zeros, negative values, -999 codes, and incredibly small, unrealistic prices.  These values would skew model estimates, skew summary statistics, and produce deceptive patterns if they were not adjusted, particularly in tasks like campaign performance evaluation, price prediction, and optimization.
 
 Inconsistencies at the ZIP and city levels may also indicate that some areas have different units of measurement or systematic issues with data entry.  This implies that if these problems are not resolved, spatial or regional models may yield unreliable results.  In general, validating price ranges, eliminating impossible values, and guaranteeing consistency across geographic fields are the most important tasks prior to modeling.  Resolving these problems enhances the validity of any analytical conclusions drawn from the dataset.
+
 ------------------------------------------------------------------------
 
 ## 4.3 Reflection: Tools, Workflow, AI Use
