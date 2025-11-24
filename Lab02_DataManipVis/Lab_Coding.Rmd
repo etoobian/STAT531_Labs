@@ -1,6 +1,6 @@
 ---
 title: "Lab02: Data Manipulation and Visualization with R"
-author: "TEAM NAME (edit this)"
+author: "TECK"
 output:
   html_document:
     toc: true
@@ -15,6 +15,11 @@ knitr::opts_chunk$set(
   message = FALSE,
   warning = FALSE
 )
+
+library(dplyr)
+library(ggplot2)
+library(arrow)
+
 ```
 
 # Overview
@@ -134,12 +139,19 @@ Your code and reasoning must reflect **your own team’s understanding**.
 6.  Load `tidyverse`, `ggplot2` and any other packages you find useful (`arrow`, `lubridate`, etc.)
 
 ```{r load-data}
-# TODO: Load packages and data here
-# Example structure (adjust paths/names to match the repo):
-# library(tidyverse)
-# library(arrow)
-# bids <- read_parquet("data/bids_data_vDTR.parquet")
-# glimpse(bids)
+# Load packages
+library(tidyverse)
+library(arrow)
+
+# Load main data set from the repo's data/ folder
+bids <- read_parquet("../data/bids_data_vDTR.parquet")
+
+# Work with a copy called df
+df <- bids
+
+# Quick preview of the data
+glimpse(df)
+
 ```
 
 ------------------------------------------------------------------------
@@ -200,11 +212,57 @@ Tasks:
 Choose only one dimension and describe what you find.
 
 ```{r price-explore}
-# TODO: your code for exploring PRICE
+library(dplyr)
+
+# 1) Create a cleaned numeric PRICE variable
+df_price <- df %>%
+  mutate(
+    PRICE_num = as.numeric(PRICE),
+    PRICE_num = na_if(PRICE_num, -999),   # turn -999 into NA
+    PRICE_num = na_if(PRICE_num, 0)       # turn 0 into NA
+  )
+
+# 2) Numerical summary of cleaned PRICE
+price_summary <- df_price %>%
+  summarize(
+    n_non_missing   = sum(!is.na(PRICE_num)),
+    n_zero_or_neg   = sum(PRICE_num <= 0, na.rm = TRUE),
+    n_very_small    = sum(PRICE_num > 0 & PRICE_num < 0.001, na.rm = TRUE),
+    Min             = min(PRICE_num, na.rm = TRUE),
+    Q1              = quantile(PRICE_num, 0.25, na.rm = TRUE),
+    Median          = median(PRICE_num, na.rm = TRUE),
+    Mean            = mean(PRICE_num, na.rm = TRUE),
+    Q3              = quantile(PRICE_num, 0.75, na.rm = TRUE),
+    Max             = max(PRICE_num, na.rm = TRUE)
+  )
+
+price_summary
+
+# 3) Price by ZIP code (to see if strange prices cluster by ZIP)
+zip_price <- df_price %>%
+  filter(
+    !is.na(PRICE_num),
+    !is.na(DEVICE_GEO_ZIP),
+    nchar(DEVICE_GEO_ZIP) == 5
+  ) %>%
+  group_by(DEVICE_GEO_ZIP) %>%
+  summarize(
+    n_obs        = n(),
+    median_price = median(PRICE_num),
+    mean_price   = mean(PRICE_num),
+    max_price    = max(PRICE_num)
+  ) %>%
+  arrange(desc(median_price))
+
+# Show top 10 ZIP codes by median price
+head(zip_price, 10)
+
 ```
 
 *(Write your interpretation below.)*
+With a mean near 0.48 and a median of about 0.20, our numerical summaries demonstrate that the majority of bid prices are modest and positive.  Nevertheless, a non-trivial number of implausible values, including zeros, negative numbers, and incredibly low prices below 0.001, are also observed.  We treated 0, −999, and extremely low prices as problematic because these values are probably data entry or coding errors rather than actual auction prices.
 
+Suspiciously high prices tend to concentrate in a small number of ZIP codes when prices are grouped by ZIP code.  The median and maximum prices of a small subset of ZIP codes are significantly higher than those of the entire dataset.  This implies that certain areas might have systematic problems with data quality (such as inaccurate units or misrecorded bids), and these ZIP codes ought to be thoroughly examined in subsequent cleaning or modeling stages.
 ------------------------------------------------------------------------
 
 ## 2.3 Response Time Behavior
@@ -246,11 +304,30 @@ Create a visualization that reveals:
 -   Any issues you suspect based on the data dictionary
 
 ```{r plot-price}
-# TODO: your price distribution plot
+library(ggplot2)
+library(dplyr)
+
+# Start with cleaned numeric price column
+df_price <- df %>%
+  mutate(
+    PRICE_num = suppressWarnings(as.numeric(PRICE)),
+    PRICE_num = ifelse(PRICE_num < 0 | PRICE_num > 200, NA, PRICE_num) # optional cleaning
+  )
+
+# Plot histogram
+ggplot(df_price, aes(x = PRICE_num)) +
+  geom_histogram(bins = 50) +
+  labs(
+    title = "Distribution of Cleaned Bid Prices",
+    x = "PRICE (numeric)",
+    y = "Count"
+  ) +
+  theme_minimal()
+
 ```
 
 *Interpretation (3–5 sentences):*
-
+The majority of bids are concentrated at extremely low price points, and the distribution of cleaned bid prices is strongly skewed to the right.  A few exceptionally high prices show up as obvious outliers, which could be the result of incorrect data entry or the use of different units.  Extremely high values may raise suspicions because the data dictionary states that prices should typically fall within a reasonable range.  Overall, the distribution has a long tail and a lot of small bids, which is normal for online auction markets but still needs to be cleaned up.
 ------------------------------------------------------------------------
 
 ## 3.2 Plot 2 — Price by Zip City
@@ -264,10 +341,44 @@ Guidance:
 -   Highlight any cities whose price behavior appears inconsistent or suspicious.
 
 ```{r plot-price-region}
-# TODO: your price-by-region plot
+library(dplyr)
+library(ggplot2)
+
+# Use the cleaned PRICE_num we created before
+# Summarize price by city
+city_price <- df_price %>%
+  filter(
+    !is.na(PRICE_num),
+    !is.na(DEVICE_GEO_CITY)
+  ) %>%
+  group_by(DEVICE_GEO_CITY) %>%
+  summarize(
+    n_obs        = n(),
+    median_price = median(PRICE_num),
+    mean_price   = mean(PRICE_num)
+  ) %>%
+  # keep only cities with enough data (e.g., at least 50 bids)
+  filter(n_obs >= 50) %>%
+  arrange(desc(median_price)) %>%
+  slice_head(n = 15)   # top 15 cities by median price
+
+# Bar plot of median price by city
+ggplot(city_price,
+       aes(x = reorder(DEVICE_GEO_CITY, median_price),
+           y = median_price)) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "Median cleaned bid price by city (top 15)",
+    x = "City",
+    y = "Median cleaned PRICE"
+  ) +
+  theme_minimal()
+
 ```
 
 *Interpretation (3–5 sentences):*
+The top cities are displayed in the plot according to the median cleaned bid price.  A few cities stand out with noticeably higher median prices, but the majority of cities have comparatively similar median prices.  These more expensive cities might represent truly more valuable ad markets, but they might also point to issues with the quality of the data (such as different units or incorrectly coded bids).  These patterns are based on a sizable number of observations because we only included cities with at least 50 bids.  It would be crucial to determine whether these expensive cities also exhibit other questionable trends in the data in subsequent analysis.
 
 ------------------------------------------------------------------------
 
@@ -286,10 +397,45 @@ Possible ideas:
 Your plot should answer a clear question, and your interpretation should explain what you learned.
 
 ```{r plot-analyst-choice}
-# TODO: your analyst's choice plot
+
+library(dplyr)
+library(ggplot2)
+
+# Create cleaned numeric price column
+df_price <- df %>%
+  mutate(
+    PRICE_num = suppressWarnings(as.numeric(PRICE)),
+    PRICE_num = ifelse(PRICE_num < 0 | PRICE_num > 200, NA, PRICE_num)
+  )
+
+# Summarize price by device type
+device_price <- df_price %>%
+  filter(!is.na(PRICE_num), !is.na(DEVICE_TYPE)) %>%
+  group_by(DEVICE_TYPE) %>%
+  summarize(
+    n_obs        = n(),
+    median_price = median(PRICE_num),
+    mean_price   = mean(PRICE_num)
+  ) %>%
+  arrange(desc(median_price))
+
+# Plot median price by device type
+ggplot(device_price,
+       aes(x = reorder(DEVICE_TYPE, median_price),
+           y = median_price)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(
+    title = "Median Bid Price by Device Type",
+    x = "Device Type",
+    y = "Median Price"
+  ) +
+  theme_minimal()
+
 ```
 
 *Interpretation (3–5 sentences):*
+The median bid price for various device types is displayed in this graphic.  Stronger advertiser demand or higher-value impressions on particular platforms are indicated by the significantly higher median prices of some device categories.  In the meantime, a number of device types exhibit extremely low median values, which may indicate different auction dynamics or lower-quality traffic.  These variations suggest that device type should be taken into account in downstream modeling since it has a significant impact on auction pricing.
 
 ------------------------------------------------------------------------
 
@@ -320,7 +466,9 @@ In 1–2 paragraphs, discuss how the issues you identified could affect:
 Which issues are most critical to fix before building models, and why?
 
 *(Write your answer here.)*
+Downstream analytics are significantly impacted by the data quality problems found in PRICE, including zeros, negative values, -999 codes, and incredibly small, unrealistic prices.  These values would skew model estimates, skew summary statistics, and produce deceptive patterns if they were not adjusted, particularly in tasks like campaign performance evaluation, price prediction, and optimization.
 
+Inconsistencies at the ZIP and city levels may also indicate that some areas have different units of measurement or systematic issues with data entry.  This implies that if these problems are not resolved, spatial or regional models may yield unreliable results.  In general, validating price ranges, eliminating impossible values, and guaranteeing consistency across geographic fields are the most important tasks prior to modeling.  Resolving these problems enhances the validity of any analytical conclusions drawn from the dataset.
 ------------------------------------------------------------------------
 
 ## 4.3 Reflection: Tools, Workflow, AI Use
