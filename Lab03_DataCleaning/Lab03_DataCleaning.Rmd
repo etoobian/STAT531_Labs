@@ -33,6 +33,8 @@ By the end, you should have:
 
 > *Work in the **same repository** as previous labs. Update your Jira Kanban board with new cards for this lab and keep committing your progress with clear messages.*
 
+![Kanban Planning Board](planning/KanbanBoard.PNG)
+
 # Setup
 
 ## Packages
