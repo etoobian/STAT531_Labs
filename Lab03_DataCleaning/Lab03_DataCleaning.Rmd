@@ -657,3 +657,6 @@ Write a short reflection addressing:
 - Which functions or workflows (e.g., `mutate()`, `case_when()`, `str_*()`, `parse_date_time()`, `distinct()`) were most valuable?
 - One thing you will do **differently** the next time you receive a new messy dataset.
 - Whether/how you used generative AI for this lab and how it affected your understanding.
+
+**Khloud**
+Cleaning this dataset was more time-consuming than I expected, especially the string-based tasks such as standardizing region codes and validating ZIP formats. Many values were inconsistent, which made it surprising how easily fields can become messy in real-world data. Functions like mutate(), case_when(), str_trim(), str_detect(), and distinct() were especially valuable for organizing and transforming variables step by step. If I receive a similar dataset in the future, I would first create a clear plan for handling string patterns and sentinel values before writing any code. I also used generative AI to help me understand errors, write some of the cleaning code, and correct mistakes. This support made the workflow more efficient and improved my understanding of data-cleaning techniques.
