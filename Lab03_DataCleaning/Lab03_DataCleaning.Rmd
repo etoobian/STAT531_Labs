@@ -325,16 +325,20 @@ Useful tools:
 > 1. Look at a small random sample of `TIMESTAMP` values.
 
 ```{r}
+
 sample(bids$TIMESTAMP)
+
 ```
 
 > 2. Use `stringr::str_detect()` to count how many timestamps use `"-"` versus `"/"` in the date.
 
 ```{r}
+
 stringr::str_detect(bids$TIMESTAMP, "-") %>%
   sum()
 stringr::str_detect(bids$TIMESTAMP, "/") %>%
   sum()
+
 ```
 
 > 3. Summarize in 1–2 sentences what you observe.
@@ -350,6 +354,7 @@ There are two obvious issues so far: NA values in the date portion of the variab
 >    - Specify a time zone (e.g., `"UTC"`).
 
 ```{r TIMESTAMP Parse}
+
 TIMESTAMP_clean <- lubridate::parse_date_time(bids$TIMESTAMP, c("ymd HMS", "mdy HMS"), tz = "UTC")
 
 ```
@@ -357,13 +362,17 @@ TIMESTAMP_clean <- lubridate::parse_date_time(bids$TIMESTAMP, c("ymd HMS", "mdy 
 > 2. Count how many `NA`s result from parsing.
 
 ```{r TIMESTAMP NAs}
+
 sum(is.na(TIMESTAMP_clean))
+
 ```
 
 > 3. Use `summary()` or `range()` to examine the minimum and maximum of `TIMESTAMP_clean`.
 
 ```{r TIMESTAMP summary}
+
 summary(TIMESTAMP_clean)
+
 ```
 
 > 4. Briefly comment on:
@@ -491,7 +500,7 @@ Use the template below and fill it in with your team’s work. **One row (PRICE)
 | DEVICE_GEO_REGION | *(team describes)* | *(team selects)* | *(team describes)* |
 | DEVICE_GEO_ZIP | *(team describes)* | *(team selects)* | *(team describes)* |
 | RESPONSE_TIME | *(team describes)* | *(team selects)* | *(team describes)* |
-| TIMESTAMP | *(team describes)* | *(team selects)* | *(team describes)* |
+| TIMESTAMP | *Not Time/Date Variable Format* | *Validity* | *Parse characters for POSIXtc formats* |
 | Other variable(s) | *(optional)* | *(optional)* | *(optional)* |
 
 ## Reflection (5–8 sentences)
@@ -502,3 +511,10 @@ Write a short reflection addressing:
 - Which functions or workflows (e.g., `mutate()`, `case_when()`, `str_*()`, `parse_date_time()`, `distinct()`) were most valuable?
 - One thing you will do **differently** the next time you receive a new messy dataset.
 - Whether/how you used generative AI for this lab and how it affected your understanding.
+
+Chris:
+
+- 
+- parse_date_time() was a very cool and useful function to scrape out date-time data from the variable.
+- Next time the first step I take will be to convert the variables to whatever type or format the data should be in. Prior to looking for errors, having a variable in the right format should make it easier to identify any issues.
+- I did not use generative AI for this lab.
