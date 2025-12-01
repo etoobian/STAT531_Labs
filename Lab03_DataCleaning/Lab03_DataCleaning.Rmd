@@ -255,7 +255,7 @@ bids %>%
 >    - How you detected inconsistent codes,
 >    - The **set-membership rule** you are enforcing (valid region codes for this dataset).
 
-We first used dplyr::count() to inspect all distinct DEVICE_GEO_REGION values and identify inconsistent or messy forms of the Oregon region code.After trimming whitespace, converting to uppercase, and removing punctuation, we defined a simple rule that any cleaned value beginning with "OR" represents a valid Oregon code.All such values were standardized to "OR", and any remaining values that did not match this pattern were treated as invalid and set to NA.
+We first used dplyr::count() to inspect all distinct DEVICE_GEO_REGION values and identify inconsistent or messy forms of the Oregon region code. After trimming whitespace, converting to uppercase, and removing punctuation, we standardized several known variants of the Oregon region code. Specifically, we mapped the values "OR", "OREGON", and "XOR" to the standard code "OR", and any remaining values that did not match these patterns were treated as invalid and set to NA.
 
 ## DEVICE_GEO_ZIP: formats and sentinels
 
@@ -349,38 +349,35 @@ bids %>%
 >    - Enforces your chosen ZIP pattern.
 
 ```{r}
-# Clean ZIP codes and create DEVICE_GEO_ZIP_clean
 bids <- bids %>%
   dplyr::mutate(
-    # 1) Remove extra spaces around the ZIP
+    # 1) Remove extra spaces
     zip_trim = stringr::str_trim(DEVICE_GEO_ZIP),
-    
-    # 2) Make sure ZIP codes are stored as character/string
+
+    # 2) Convert ZIP to character
     zip_char = as.character(zip_trim),
-    
-    # 3) Mark sentinel values that should be treated as missing
+
+    # 3) Check sentinel BEFORE padding
     is_sentinel = zip_char %in% c("-999", "9999", "00000"),
-    
-    # 4) Replace sentinel ZIPs with NA, keep others as they are
-    zip_no_sentinel = dplyr::if_else(
-      is_sentinel,
-      NA_character_,
-      zip_char
-    ),
-    
-    # 5) Pad with leading zeros to make all ZIPs 5 characters (if needed)
+
+    # 4) Replace sentinel with NA
+    zip_no_sentinel = dplyr::if_else(is_sentinel, NA_character_, zip_char),
+
+    # 5) Now pad ZIPs after removing sentinel values
     zip_padded = stringr::str_pad(zip_no_sentinel, width = 5, side = "left", pad = "0"),
-    
-    # 6) Check which ZIPs look like valid Oregon ZIPs: 5 digits starting with "97"
-    is_valid_oregon_zip = stringr::str_detect(zip_padded, "^97[0-9]{3}$"),
-    
-    # 7) Final cleaned ZIP: keep only valid Oregon ZIPs, others become NA
+
+    # 6) Check valid Oregon ZIPs
+    is_valid_oregon_zip = !is.na(zip_padded) &
+                          stringr::str_detect(zip_padded, "^97[0-9]{3}$"),
+
+    # 7) Final cleaned ZIP
     DEVICE_GEO_ZIP_clean = dplyr::if_else(
       is_valid_oregon_zip,
       zip_padded,
       NA_character_
     )
   )
+
 
 # Look at the cleaned ZIP distribution to confirm the result
 bids %>%
@@ -422,7 +419,8 @@ sample(bids$RESPONSE_TIME, size = 20)
 
 bids <- bids %>%
   mutate(
-    # 1) Remove any prefix like "RESPONSE_TIME:" (allow small typos)
+   # 1) Remove the exact prefix "RESPONSE_TIME:" from the beginning of the string.
+
     rt_no_prefix = stringr::str_replace(
       RESPONSE_TIME,
       "^RESPONSE_TIME[: ]*",   # remove prefix at start
@@ -642,12 +640,14 @@ Use the template below and fill it in with your team’s work. **One row (PRICE)
 
 | Variable | Problem Detected (brief) | Data Quality Dimension(s) | Cleaning Action (brief) |
 |----------|-------------------------|---------------------------|--------------------------|
-| PRICE | Includes non-numeric characters | Validity | Extract numeric portion and convert to numeric |
-| DEVICE_GEO_REGION | *(team describes)* | *(team selects)* | *(team describes)* |
-| DEVICE_GEO_ZIP | *(team describes)* | *(team selects)* | *(team describes)* |
-| RESPONSE_TIME | *(team describes)* | *(team selects)* | *(team describes)* |
-| TIMESTAMP | *(team describes)* | *(team selects)* | *(team describes)* |
-| Other variable(s) | *(optional)* | *(optional)* | *(optional)* |
+| Variable           | Problem Detected (brief)                                                | Data Quality Dimension(s) | Cleaning Action (brief)                                                         |
+|-------------------|--------------------------------------------------------------------------|----------------------------|--------------------------------------------------------------------------------|
+| PRICE             | Includes non-numeric characters                                          | Validity                   | Extract numeric portion and convert to numeric                                  |
+| DEVICE_GEO_REGION | Inconsistent forms ("OREGON", "XOR", lowercase, extra spaces/punctuation) | Consistency / Validity     | Trim, uppercase, remove punctuation; map "OR", "OREGON", "XOR" → "OR"; others → NA |
+| DEVICE_GEO_ZIP    | Sentinel codes (-999, 9999, 00000), non-digit chars, wrong length       | Validity / Accuracy        | Remove sentinels; trim; convert to character; pad to 5 digits; keep valid Oregon ZIPs (97xxx) |
+| RESPONSE_TIME     | Prefix "RESPONSE_TIME:" and trailing non-digit characters                | Validity                   | Remove prefix; strip non-digit endings; convert to numeric; invalid → NA        |
+| TIMESTAMP         | *(team describes)*                                                       | *(team selects)*            | *(team describes)*                                                              |
+| Other variable(s) | *(optional)*                                                             | *(optional)*                | *(optional)*                                                                    |
 
 ## Reflection (5–8 sentences)
 
