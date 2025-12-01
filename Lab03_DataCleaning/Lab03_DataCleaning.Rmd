@@ -71,13 +71,14 @@ bids <- read_parquet("../data/bids_data_vDTR.parquet")
 
 Using your prior lab work and Data Cleaning lectures:
 
-1.  In **2–4 sentences**, describe **what each row** in this dataset represents. For each row, there exists three unique identifiers that can be utilized to identify individual rows: AUCTION_ID, PUBLISHER_ID and RESPONSE_TIME. These rows can then be further grouped into blocks by AUCTION_ID to classify by individuals auctions being taken place. Each row of this subset of rows represent an individual bid with a given PRICE (in cost per mille) that is paired with meta data that can be utilized for further analysis.
+1.  In **2–4 sentences**, describe **what each row** in this dataset represents.
+  There is no consistent unique identifier that can be found for any of the rows. Ideally it would be encompassed entirely by AUCTION_ID, PUBLISHER_ID and RESPONSE_TIME, but there is no means of condensing the data as such.
 2.  Identify **one or two variables** that you think should be:
     -   **Mandatory**: PRICE; this is due to the fact that we are looking to perform analysis on PRICE itself, and if a PRICE value is missing, we cannot perform an analysis.
-    -   **Unique Key**: AUCTION_ID; though this is one of the three keys that are utilized to delineate unique rows, without an AUCTION_ID, there exists no way to classify what anythig is being bid on.
+    -   **Unique Key**: There exists no Unique Key or any small consistent combination of keys that can indicate uniqueness between each row. 
 3.  Pick **two variables** and, for each, assign at least one **data quality dimension** (e.g., completeness, validity, consistency, uniqueness, cross-field consistency).
     -   PRICE needs to be complete and valid, otherwise these rows should be dropped as they don't contribute to any form of analysis given that there is no underlying pattern as to why they are incomplete/invalid.
-    -   AUCTION_ID must be unique within their own groupings to ensure that all other columns stay relevant and usable.
+    -   AUCTION_ID must be unique within their own groupings to ensure that all other columns stay relevant and usable (though individually not unique from each other).
 
 > **Write your answers directly in this Rmd in a text section (not code).**
 
@@ -174,7 +175,7 @@ nrow(filter(.data=bids, PRICE_clean < 0.0001)) / nrow(bids) * 100 # % of values 
 
 > 2.  Write down your **rules** for how to handle each type (e.g., set to `NA`, drop rows, cap values).
 
-Though it is uncommon for there to be CPM values greater than 50, it is not implausible. However, given that it makes up a small percentage of the data (0.0227%), we can remove them without much impact to the overall data set. There is one thing to note when removing any rows, is that it would impact the individual analysis of certain auctions that have taken place in the dataset (i.e. an auction with potentially 2 bids, now only has one bid, and the other bid did not win, leaving this to be a winless auction). Similarily, though it is uncommon for incredibly small CPM values (close to 0; less than 0.0001), it is not implausible, but given that it is such a small percentage (0.000675%). What had been done prior to this section include removing irretrievable data values (-999) and reverse negation of the remaining negative values.
+Though it is uncommon for there to be CPM values greater than 50, it is not implausible. However, given that it makes up a small percentage of the data (0.0227%), we can remove them without much impact to the overall data set. There is one thing to note when removing any rows, is that it would impact the individual analysis of certain auctions that have taken place in the dataset (i.e. an auction with potentially 2 bids, now only has one bid, and the other bid did not win, leaving this to be a winless auction). Similarly, though it is uncommon for incredibly small CPM values (close to 0; less than 0.0001), it is not implausible, but given that it is such a small percentage (0.000675%). What had been done prior to this section include removing irretrievable data values (-999) and reverse negation of the remaining negative values.
 
 > 3.  Implement those rules in a new variable (e.g., `PRICE_final`) using `dplyr::mutate()` and `dplyr::case_when()`.
 
