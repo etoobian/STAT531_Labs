@@ -44,6 +44,7 @@ Minimally, you will need these packages:
 ```{r loadpackages}
 library(tidyverse)
 library(arrow)
+library(dplyr)
 ```
 
 - `tidyverse` (especially `dplyr`, `ggplot2`, `readr`, `stringr`)
@@ -383,32 +384,189 @@ Using your earlier reasoning:
 > **Tasks:**
 >
 > 1. Choose one variable or a combination of variables that you **believe should uniquely identify** a row (a key).
+
+- According to the data dictionary, the grain should be `(AUCTION_ID, bidder/seat, size, …)`.
+- We have not been given `bidder/seat`, `bidder`, or `seat`.
+- We must find a different unique key or combination of variables to make a **composite key**.
+- Based on the available variables, a composite key *may* be `AUCTION_ID`, `SIZE`, and `PRICE`.
+
+
 > 2. Use `dplyr::count()` to check whether that key is truly unique or if there are duplicates.
 
-```{r}
-# Your code here
+```{r candidate-key-check}
+# Candidate composite key: AUCTION_ID + SIZE + PRICE
 
+# Compare rows vs. distinct by composite key
+bids_raw %>%
+  dplyr::summarise(
+    n_rows          = dplyr::n(),
+    n_unique_auct   = dplyr::n_distinct(AUCTION_ID, SIZE, PRICE)
+  )
+
+# Show composite key rows that appear more than once
+candidate_key_counts <- bids_raw %>%
+  dplyr::count(AUCTION_ID, SIZE, PRICE, sort = TRUE)
+
+candidate_key_counts %>%
+  dplyr::filter(n > 1) %>%
+  head(20)
 ```
+
+- We see that with the three variables `AUCTION_ID`, `SIZE`, and `PRICE`, we do not have a composite key to uniquely identify rows.
+- This could be party due to exact full-row duplicates (inspected next).
+
 
 > 3. Check for **full-row duplicates** using `dplyr::distinct()` or by counting occurrences across all columns.
 
-```{r}
-# Your code here
+```{r full-row-duplicate-check}
+# Total number of rows in dataset
+n_rows <- nrow(bids_raw)
 
+# Number of distinct rows across all columns
+n_rows_distinct <- bids_raw %>%
+  dplyr::distinct() %>%
+  nrow()
+
+# Number of exact duplicate rows
+n_exact_duplicates <- n_rows - n_rows_distinct
+
+cat("Total rows:                      ", n_rows, "\n")
+cat("Distinct rows (all columns):      ", n_rows_distinct, "\n")
+cat("Exact duplicate rows (by count):  ", n_exact_duplicates, "\n")
 ```
+
+- We see that we have 2,434 rows which are exact duplicates.
+
 
 > 4. Decide on a rule for handling duplicates:
 >    - Drop exact duplicates?
 >    - Keep first occurrence and drop the rest?
 >    - Something else?
+
+- We will drop full duplicate rows, keeping a single row in each set of duplicates.
+
+
 > 5. Implement your rule and create a de-duplicated dataset (e.g., `bids_nodup`).
 
-```{r}
-# Your code here
+```{r create-bids-nodup}
+# Remove exact full-row duplicates (keep one copy)
+bids_nodup <- bids_raw %>%
+  distinct()
 
+cat("Rows in original dataset:   ", nrow(bids_raw), "\n")
+cat("Rows in bids_nodup dataset: ", nrow(bids_nodup), "\n")
 ```
 
+- We now have a count of **441,535 rows**, which matches the number of distinct rows in the raw data.
+
+We can now re-check our initial candidate for a composite key:
+
+```{r candidate-key-recheck}
+# Candidate composite key: AUCTION_ID + SIZE + PRICE
+
+# Compare rows vs. distinct by composite key
+bids_nodup %>%
+  dplyr::summarise(
+    n_rows         = dplyr::n(),
+    n_unique_key   = dplyr::n_distinct(AUCTION_ID, SIZE, PRICE)
+  )
+
+# Show composite key rows that appear more than once
+candidate_key_counts <- bids_nodup %>%
+  dplyr::count(AUCTION_ID, SIZE, PRICE, sort = TRUE)
+
+candidate_key_counts %>%
+  dplyr::filter(n > 1) %>%
+  head(20)
+```
+
+- Although we have removed full duplicate rows, this particular set of variables still does not work as a composite key for unique row identification.
+
+We can create a helper function to allow us to search available variables for a combination which will work as a key. To avoid computational blowout, we focus only on variables which logically make the most sense and limit our number of variables per composite key to 4:
+
+```{r composite-key-helper}
+check_candidate_keys <- function(data, cols, max_size = 4, show_full = TRUE) {
+  results <- list()
+  idx <- 1L
+  
+  for (k in seq_len(max_size)) {
+    combos <- combn(cols, k, simplify = FALSE)
+    
+    for (combo in combos) {
+      n_unique <- data %>%
+        distinct(across(all_of(combo))) %>%
+        nrow()
+      
+      results[[idx]] <- tibble(
+        combo   = paste(combo, collapse = " + "),
+        size    = k,
+        n_rows  = nrow(data),
+        n_unique = n_unique,
+        is_key  = (n_unique == nrow(data))
+      )
+      idx <- idx + 1L
+    }
+  }
+  
+  results <- bind_rows(results)
+  
+  if (show_full) {
+    # Full table (shown if needed for further exploration)
+    results %>%
+      arrange(desc(is_key), size, desc(n_unique))
+  } else {
+    # Compact summary
+    results %>%
+      group_by(size) %>%
+      summarise(
+        num_combos   = n(),
+        num_keys     = sum(is_key),
+        max_n_unique = max(n_unique),
+        .groups = "drop"
+      ) %>%
+      arrange(size)
+  }
+}
+```
+
+
+We then use this function to check the most likely candidate variables:
+
+```{r composite-key-search}
+composite_candidates <- c(
+  "AUCTION_ID",
+  "SIZE",
+  "PRICE",
+  "RESPONSE_TIME",
+  "BID_WON",
+  "PUBLISHER_ID",
+  "DEVICE_TYPE",
+  "DEVICE_GEO_CITY",
+  "DEVICE_GEO_ZIP",
+  "DEVICE_GEO_LAT",
+  "DEVICE_GEO_LONG",
+  "TIMESTAMP"
+)
+
+key_results <- check_candidate_keys(
+  data     = bids_nodup,
+  cols     = composite_candidates,
+  max_size = 4,
+  show_full = FALSE
+)
+
+key_results
+```
+
+- From these results, we can see that no combination (up to four variables) of these candidate variables will create a composite key to uniquely identify the rows of this dataset. The **maximum number of unique rows in any combination was 441,172**, but our dataset with no full-row duplicates is 441,535.
+
+
 > 6. In 2–3 sentences, explain your choice and connect it to the **uniqueness** dimension of data quality.
+
+Our main design choice for improving the **uniqueness** dimension was to remove exact full-row duplicates, keeping one copy of each identical record to avoid double-counting while preserving all genuinely different rows. 
+After removing these duplicates, we searched for single-column and composite keys (up to four candidate fields) and found that none of our tested combinations uniquely identifies every row. The data dictionary’s grain definition depends on missing bidder/seat fields.
+Thus, we can enforce uniqueness only by eliminating exact duplicates, not by defining a true primary key from the available columns.
+
 
 ## Out-of-range latitude/longitude (optional but recommended)
 
