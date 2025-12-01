@@ -214,15 +214,15 @@ bids %>%
 
 ```{r}
 # Inspect simplified versions of the region strings to identify Oregon variants
+bids <- bids %>%
+  dplyr::mutate(
+    region_trim  = stringr::str_trim(DEVICE_GEO_REGION),          # remove extra spaces
+    region_upper = stringr::str_to_upper(region_trim),            # convert to uppercase
+    region_clean = stringr::str_replace_all(region_upper, "[^A-Z]", "")  # keep letters only
+  )
+
 bids %>%
-  mutate(
-    region_trim  = str_trim(DEVICE_GEO_REGION),       # remove extra spaces
-    region_upper = str_to_upper(region_trim),         # convert to uppercase
-    region_clean = str_replace_all(region_upper, "[^A-Z]", "")  # keep only letters
-  ) %>%
-  count(region_clean, sort = TRUE)
-
-
+  dplyr::count(region_clean, sort = TRUE)
 
 ```
 
@@ -232,15 +232,11 @@ bids %>%
 
 
 ```{r}
-# Create a cleaned region variable and standardize Oregon codes
 bids <- bids %>%
-  dplyr::mutate(
-    # Step 1: basic cleaning (trim spaces and convert to uppercase)
-    region_clean = stringr::str_to_upper(stringr::str_trim(DEVICE_GEO_REGION)),
-    
-    # Step 2: define the final cleaned region variable
+  mutate(
+  # Standardize all Oregon variants to "OR"
     DEVICE_GEO_REGION_clean = dplyr::case_when(
-      region_clean %in% c("OR", "OREGON", "XOR") ~ "OR",
+      region_clean %in% c("OR", "ORE", "OREG", "OREGON") ~ "OR",
       TRUE ~ NA_character_
     )
   )
