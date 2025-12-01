@@ -647,6 +647,7 @@ Use the template below and fill it in with your team’s work. **One row (PRICE)
 
 | Variable | Problem Detected (brief) | Data Quality Dimension(s) | Cleaning Action (brief) |
 |----------|-------------------------|---------------------------|--------------------------|
+| <FULL DATASET> | full-row duplicates | uniqueness | removed duplicates while maintaining single copy of each identical row |
 | PRICE | Includes non-numeric characters | Validity | Extract numeric portion and convert to numeric |
 | DEVICE_GEO_REGION | *(team describes)* | *(team selects)* | *(team describes)* |
 | DEVICE_GEO_ZIP | *(team describes)* | *(team selects)* | *(team describes)* |
