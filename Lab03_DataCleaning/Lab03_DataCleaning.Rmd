@@ -812,6 +812,8 @@ Use the template below and fill it in with your team’s work. **One row (PRICE)
 | PRICE | Includes non-numeric characters | Validity | Extract numeric portion and convert to numeric |
 | DEVICE_GEO_REGION | *(team describes)* | *(team selects)* | *(team describes)* |
 | DEVICE_GEO_ZIP | *(team describes)* | *(team selects)* | *(team describes)* |
+| DEVICE_GEO_LAT | NONE: All values verified to be within plausible Oregon range | Validity, Accuracy | Copied into DEVICE_GEO_LAT_clean as-is |
+| DEVICE_GEO_LONG | 100 values outside Oregon plausible range | Validity, Accuracy | Shifted 100 values by 10 degrees (justifications above) |
 | RESPONSE_TIME | *(team describes)* | *(team selects)* | *(team describes)* |
 | TIMESTAMP | *(team describes)* | *(team selects)* | *(team describes)* |
 | Other variable(s) | *(optional)* | *(optional)* | *(optional)* |
