@@ -251,7 +251,7 @@ bids %>%
 >    - How you detected inconsistent codes,
 >    - The **set-membership rule** you are enforcing (valid region codes for this dataset).
 
-We first used dplyr::count() to inspect all distinct DEVICE_GEO_REGION values and identify inconsistent or messy forms of the Oregon region code. After trimming whitespace, converting to uppercase, and removing punctuation, we standardized several known variants of the Oregon region code. Specifically, we mapped the values "OR", "OREGON", and "XOR" to the standard code "OR", and any remaining values that did not match these patterns were treated as invalid and set to NA.
+We used dplyr::count() to inspect all distinct DEVICE_GEO_REGION values and identify inconsistent Oregon codes. After trimming whitespace and converting all values to uppercase, we standardized the valid variants "OR" and "OREGON" to the clean code "OR", while treating "XOR" and any other unexpected patterns as invalid and setting them to NA.
 
 ## DEVICE_GEO_ZIP: formats and sentinels
 
@@ -276,32 +276,53 @@ bids %>%
 >    - Non-digit characters.
 
 ```{r}
-
+# Helper table for ZIP checks (used in Tasks 2–4)
 bids_zip_check <- bids %>%
   mutate(
-    # Convert ZIP to character and trim any surrounding spaces
-    zip_char   = as.character(DEVICE_GEO_ZIP),
-    zip_char   = str_trim(zip_char),
-    
-    # Length of the ZIP string
-    zip_length = str_length(zip_char),
-    
-    # TRUE if there is any non-digit character (letters, dashes, spaces, etc.)
-    has_nondigit = str_detect(zip_char, "[^0-9]"),
-    
-    # TRUE for obvious sentinel codes we want to treat as invalid
-    is_sentinel = zip_char %in% c("-999", "9999", "00000")
-  ) %>%
-  # Count how often each pattern appears
-  count(zip_char, zip_length, has_nondigit, is_sentinel, sort = TRUE) %>%
-  
-  # Keep only suspicious ZIPs:
-  # - wrong length (not 5),
-  # - or has non-digit characters,
-  # - or is one of our sentinel codes
-  filter(zip_length != 5 | has_nondigit | is_sentinel)
+    # 1) Normalize ZIP: character + trim spaces
+    zip_raw   = as.character(DEVICE_GEO_ZIP),
+    zip_trim  = stringr::str_trim(zip_raw),
 
-bids_zip_check
+    # 2) Length of the full ZIP string
+    zip_length = stringr::str_length(zip_trim),
+
+    # 3) Sentinel codes we want to treat as invalid
+    is_sentinel = zip_trim %in% c("-999"),
+
+    # 4) Does the ZIP start with a negative sign?
+    starts_negative = stringr::str_starts(zip_trim, "-"),
+
+    # 5) First 5 characters (candidate 5-digit ZIP)
+    zip5 = stringr::str_sub(zip_trim, 1, 5),
+
+    # 6) Check that the first 5 chars are exactly 5 digits
+    zip5_is_digits = stringr::str_detect(zip5, "^[0-9]{5}$"),
+
+    # 7) Convert those 5 digits to integer (for range checks)
+    zip5_int = dplyr::if_else(zip5_is_digits, as.integer(zip5), NA_integer_),
+
+    # 8) Oregon range check: 97001–97920
+    out_of_or_range = dplyr::if_else(
+      !is.na(zip5_int) & (zip5_int < 97001L | zip5_int > 97920L),
+      TRUE, FALSE
+    ),
+
+    # 9) Any non-digit characters anywhere in the trimmed ZIP?
+    has_nondigit = !stringr::str_detect(zip_trim, "^[0-9-]+$")
+  )
+
+# Task 2: show only *suspicious* ZIP patterns
+suspicious_zips <- bids_zip_check %>%
+  filter(
+    zip_length < 5 | zip_length > 10 |   # too short / too long
+      is_sentinel |                      # sentinel values
+      starts_negative |                  # negative ZIPs
+      has_nondigit |                     # non-digit characters
+      out_of_or_range                    # outside Oregon range
+  ) %>%
+  count(zip_trim, sort = TRUE)
+
+suspicious_zips
 
 ```
 
@@ -310,31 +331,18 @@ bids_zip_check
 
 ```{r}
 
-bids <- bids %>%
+# Use the helper table from Task 2
+bids_zip_check <- bids_zip_check %>%
   mutate(
-    # Work with ZIP as character and trim spaces
-    zip_char   = as.character(DEVICE_GEO_ZIP),
-    zip_trim   = str_trim(zip_char),
-    
-    # Pad with leading zeros if needed to reach length 5
-    zip_padded = str_pad(zip_trim, width = 5, side = "left", pad = "0"),
-    
-    # Helper columns for our validity checks
-    zip_length   = str_length(zip_padded),
-    has_nondigit = str_detect(zip_padded, "[^0-9]"),
-    is_sentinel  = zip_padded %in% c("-999", "9999", "00000"),
-    
-    # Pattern for a valid Oregon ZIP: 5 digits, starting with 97
-    is_valid_oregon_zip = !is.na(zip_padded) &
-                          !is_sentinel &
-                          !has_nondigit &
-                          zip_length == 5 &
-                          str_detect(zip_padded, "^97[0-9]{3}$")
+    is_valid_oregon_zip =
+      !is.na(zip5_int) &       # valid 5-digit ZIP
+      !is_sentinel &           # not -999
+      !starts_negative &       # does not start with "-"
+      !has_nondigit &          # only digits
+      !out_of_or_range         # inside Oregon range
   )
 
-# (Optional) See how many ZIPs are valid vs invalid
-bids %>%
-  count(is_valid_oregon_zip)
+bids_zip_check %>% count(is_valid_oregon_zip)
 
 
 ```
@@ -345,35 +353,15 @@ bids %>%
 >    - Enforces your chosen ZIP pattern.
 
 ```{r}
-bids <- bids %>%
-  dplyr::mutate(
-    # 1) Remove extra spaces
-    zip_trim = stringr::str_trim(DEVICE_GEO_ZIP),
-
-    # 2) Convert ZIP to character
-    zip_char = as.character(zip_trim),
-
-    # 3) Check sentinel BEFORE padding
-    is_sentinel = zip_char %in% c("-999", "9999", "00000"),
-
-    # 4) Replace sentinel with NA
-    zip_no_sentinel = dplyr::if_else(is_sentinel, NA_character_, zip_char),
-
-    # 5) Now pad ZIPs after removing sentinel values
-    zip_padded = stringr::str_pad(zip_no_sentinel, width = 5, side = "left", pad = "0"),
-
-    # 6) Check valid Oregon ZIPs
-    is_valid_oregon_zip = !is.na(zip_padded) &
-                          stringr::str_detect(zip_padded, "^97[0-9]{3}$"),
-
-    # 7) Final cleaned ZIP
-    DEVICE_GEO_ZIP_clean = dplyr::if_else(
+# Final cleaned ZIP using the helper table (no repeated cleaning)
+bids <- bids_zip_check %>%
+  mutate(
+    DEVICE_GEO_ZIP_clean = if_else(
       is_valid_oregon_zip,
-      zip_padded,
-      NA_character_
+      zip5,           # keep the first 5 digits
+      NA_character_   # otherwise NA
     )
   )
-
 
 # Look at the cleaned ZIP distribution to confirm the result
 bids %>%
@@ -383,7 +371,7 @@ bids %>%
 
 > 5. In a short paragraph, describe your rule and why it is reasonable given the context (Oregon-only data).
 
-requirements:the ZIP code must start with "97," the standard prefix for Oregon ZIP codes, and it must have exactly five digits.  Additionally, since they don't represent actual locations, I substituted NA for values that were obvious sentinel codes (like -999, 9999, or 00000).Since only bids from Oregon are included in the dataset, it makes sense to treat any ZIP code that deviates from the Oregon ZIP pattern as invalid for the purposes of this analysis.
+Our rule defines a “valid” ZIP code as a clean 5-digit Oregon ZIP between 97001 and 97920.This rule is reasonable because the dataset only contains bids from Oregon, so any value outside this range cannot represent a real Oregon location.  After examining the raw ZIP codes to identify common problems, we looked for suspicious patterns like sentinel values (-999), negative signs, non-digit characters, and incorrect lengths.  After extracting the first five digits and checking whether they formed a valid Oregon ZIP, we kept only those that passed all checks and set everything else to NA.  This ensures that our cleaned ZIP codes are realistic, consistent, and aligned with the geographic scope of the data.
 
 ## RESPONSE_TIME: prefixes and extra characters
 
@@ -408,35 +396,29 @@ sample(bids$RESPONSE_TIME, size = 20)
 >    - Remove any “RESPONSE_TIME:” prefixes (including likely typos),
 >    - Strip extra non-numeric characters from the end,
 >    - Convert the remaining content to a numeric type.
+
+To clean the RESPONSE_TIME field, my rule is to first remove any text prefix at the beginning of the value, including typos or variations of “RESPONSE_TIME”.  I then remove any additional non-numeric characters that might be present at the end of the string.I transform the cleaned value into a numeric type so that it can be used for analysis once only the digits are left.
+
 > 3. Implement your rule in a cleaned variable (e.g., `RESPONSE_TIME_clean`) using `stringr::str_replace()` or related functions and `as.numeric()`.
 
 ```{r}
-# Clean RESPONSE_TIME field
-
+# Clean RESPONSE_TIME
 bids <- bids %>%
   mutate(
-   # 1) Remove the exact prefix "RESPONSE_TIME:" from the beginning of the string.
+    # 1) Remove ANY prefix (correct or typo) = remove all characters until first digit
+    rt_no_prefix = stringr::str_replace(RESPONSE_TIME, "^[^0-9]+", ""),
 
-    rt_no_prefix = stringr::str_replace(
-      RESPONSE_TIME,
-      "^RESPONSE_TIME[: ]*",   # remove prefix at start
-      ""
-    ),
-    
     # 2) Remove any trailing non-numeric characters
-    rt_digits_only = stringr::str_replace(
-      rt_no_prefix,
-      "[^0-9]+$",              # remove non-digits at end
-      ""
-    ),
-    
+    rt_digits_only = stringr::str_replace(rt_no_prefix, "[^0-9]+$", ""),
+
     # 3) Convert to numeric
     RESPONSE_TIME_clean = as.numeric(rt_digits_only)
   )
 
-bids %>%
-  count(RESPONSE_TIME_clean, sort = TRUE)
+# Check result
+bids %>% count(RESPONSE_TIME_clean, sort = TRUE)
 summary(bids$RESPONSE_TIME_clean)
+
 
 ```
 
