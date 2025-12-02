@@ -263,9 +263,8 @@ Treat ZIP codes as **strings**, not numbers.
 
 
 ```{r}
-# Convert ZIP codes to character and list the most common values
+# List the most common ZIP values (already stored as character)
 bids %>%
-  mutate(DEVICE_GEO_ZIP = as.character(DEVICE_GEO_ZIP)) %>%
   count(DEVICE_GEO_ZIP, sort = TRUE)
 
 ```
@@ -279,8 +278,7 @@ bids %>%
 # Helper table for ZIP checks (used in Tasks 2–4)
 bids_zip_check <- bids %>%
   mutate(
-    # 1) Normalize ZIP: character + trim spaces
-    zip_raw   = as.character(DEVICE_GEO_ZIP),
+    # 1) Normalize ZIP: trim spaces
     zip_trim  = stringr::str_trim(zip_raw),
 
     # 2) Length of the full ZIP string
@@ -371,7 +369,7 @@ bids %>%
 
 > 5. In a short paragraph, describe your rule and why it is reasonable given the context (Oregon-only data).
 
-Our rule defines a “valid” ZIP code as a clean 5-digit Oregon ZIP between 97001 and 97920.This rule is reasonable because the dataset only contains bids from Oregon, so any value outside this range cannot represent a real Oregon location.  After examining the raw ZIP codes to identify common problems, we looked for suspicious patterns like sentinel values (-999), negative signs, non-digit characters, and incorrect lengths.  After extracting the first five digits and checking whether they formed a valid Oregon ZIP, we kept only those that passed all checks and set everything else to NA.  This ensures that our cleaned ZIP codes are realistic, consistent, and aligned with the geographic scope of the data.
+Our rule defines a valid ZIP code as a clean 5-digit Oregon ZIP between 97001 and 97920. Because the data only contains Oregon bids, any value outside this range cannot be real. After reviewing the raw ZIPs, we flagged issues such as sentinel values (-999), negative signs, non-digit characters, and incorrect lengths. We treated “-999” as NA because it is a negative, impossible ZIP value that falls outside Oregon’s valid bounds and clearly acts as a sentinel placeholder. After extracting the first five digits, we kept only values that passed all checks and set the rest to NA.
 
 ## RESPONSE_TIME: prefixes and extra characters
 
