@@ -236,7 +236,7 @@ bids <- bids %>%
   mutate(
   # Standardize all Oregon variants to "OR"
     DEVICE_GEO_REGION_clean = dplyr::case_when(
-      region_clean %in% c("OR", "ORE", "OREG", "OREGON") ~ "OR",
+      region_clean %in% c("OR", "ORE", "OREG", "OREGON", "XOR") ~ "OR",
       TRUE ~ NA_character_
     )
   )
@@ -251,7 +251,7 @@ bids %>%
 >    - How you detected inconsistent codes,
 >    - The **set-membership rule** you are enforcing (valid region codes for this dataset).
 
-We used dplyr::count() to inspect all distinct DEVICE_GEO_REGION values and identify inconsistent Oregon codes. After trimming whitespace and converting all values to uppercase, we standardized the valid variants "OR" and "OREGON" to the clean code "OR", while treating "XOR" and any other unexpected patterns as invalid and setting them to NA.
+We used dplyr count() to inspect all distinct DEVICE_GEO_REGION values and identify inconsistent Oregon codes. After trimming whitespace and converting all values to uppercase, we standardized all Oregon variants (“OR”, “ORE”, “OREG”, “OREGON”, and “XOR”) to the clean code “OR”, while treating any other unexpected patterns as invalid and setting them to NA.
 
 ## DEVICE_GEO_ZIP: formats and sentinels
 
