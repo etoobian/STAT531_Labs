@@ -72,13 +72,13 @@ bids <- read_parquet("../data/bids_data_vDTR.parquet")
 Using your prior lab work and Data Cleaning lectures:
 
 1.  In **2–4 sentences**, describe **what each row** in this dataset represents.
-  There is no consistent unique identifier that can be found for any of the rows. Ideally it would be encompassed entirely by AUCTION_ID, PUBLISHER_ID and RESPONSE_TIME, but there is no means of condensing the data as such. Taken from the Second Lab, section 1-2:
+Taken from the Second Lab, section 1-2:
   - The Prebid server handles online ad auctions where multiple bidders submit CPM bids.
   - Each auction can have multiple bidders and each bidder may bid on multiple sizes.
   - Each row corresponds to **one bidder's response for one size within an auction**.
 2.  Identify **one or two variables** that you think should be:
     -   **Mandatory**: PRICE; this is due to the fact that we are looking to perform analysis on PRICE itself, and if a PRICE value is missing, we cannot perform an analysis.
-    -   **Unique Key**: There exists no Unique Key or any small consistent combination of keys that can indicate uniqueness between each row. 
+    -   **Unique Key**: There exists no Unique Key or any small consistent combination of keys that can indicate uniqueness between each row that exists within this dataset.
 3.  Pick **two variables** and, for each, assign at least one **data quality dimension** (e.g., completeness, validity, consistency, uniqueness, cross-field consistency).
     -   PRICE needs to be complete and valid, otherwise these rows should be dropped as they don't contribute to any form of analysis given that there is no underlying pattern as to why they are incomplete/invalid.
     -   AUCTION_ID must be unique within their own groupings to ensure that all other columns stay relevant and usable (though individually not unique from each other).
@@ -521,5 +521,5 @@ Write a short reflection addressing:
 Takeshi:
 - The most time-consuming task was realizing that there was an O instead of a zero.
 - filter() and mutate() were the top two functions utilized in cleaning the data, but there is an honorable mention to substr() and sub() that allowed me to correct the O to a zero.
-- Under the assumption that there is no data dictionary like this project, I will like to assume that there is no one set way of doing data cleaning, and therefore for me to say there is an exact way to clean data would be quite rambuctious of me. 
+- Under the assumption that there is no data dictionary like what has been given for this project, I will like to assume that there is no one set way of doing data cleaning, and therefore for me to say there is an exact way to clean data would be quite rambunctious of me. 
 - I did not use generative AI for this task, since most of the lab was completed independently before hand. For anything new that I had to implement for this lab specifically, I did not need generative AI.
