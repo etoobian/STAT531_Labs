@@ -33,6 +33,8 @@ By the end, you should have:
 
 > *Work in the **same repository** as previous labs. Update your Jira Kanban board with new cards for this lab and keep committing your progress with clear messages.*
 
+![Kanban Planning Board](planning/KanbanBoard.PNG)
+
 # Setup
 
 ## Packages
@@ -42,6 +44,10 @@ Minimally, you will need these packages:
 ```{r loadpackages}
 library(tidyverse)
 library(arrow)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(stringr)
 ```
 
 - `tidyverse` (especially `dplyr`, `ggplot2`, `readr`, `stringr`)
@@ -64,10 +70,9 @@ Use the **same dataset** as in the earlier lab (e.g., a Parquet file in your `da
 You may want to keep the original as `bids_raw` and your working copy as `bids`.
 
 ```{r Read Data}
-bids <- read_parquet("../data/bids_data_vDTR.parquet")
+bids_raw <- read_parquet("../data/bids_data_vDTR.parquet")
 
 ```
-
 
 # Quick Orientation Check (10–15 minutes)
 
@@ -381,32 +386,189 @@ Using your earlier reasoning:
 > **Tasks:**
 >
 > 1. Choose one variable or a combination of variables that you **believe should uniquely identify** a row (a key).
+
+- According to the data dictionary, the grain should be `(AUCTION_ID, bidder/seat, size, …)`.
+- We have not been given `bidder/seat`, `bidder`, or `seat`.
+- We must find a different unique key or combination of variables to make a **composite key**.
+- Based on the available variables, a composite key *may* be `AUCTION_ID`, `SIZE`, and `PRICE`.
+
+
 > 2. Use `dplyr::count()` to check whether that key is truly unique or if there are duplicates.
 
-```{r}
-# Your code here
+```{r candidate-key-check}
+# Candidate composite key: AUCTION_ID + SIZE + PRICE
 
+# Compare rows vs. distinct by composite key
+bids_raw %>%
+  dplyr::summarise(
+    n_rows          = dplyr::n(),
+    n_unique_auct   = dplyr::n_distinct(AUCTION_ID)#, SIZE, PRICE)
+  )
+
+# Show composite key rows that appear more than once
+candidate_key_counts <- bids_raw %>%
+  dplyr::count(AUCTION_ID, SIZE, PRICE, sort = TRUE)
+
+candidate_key_counts %>%
+  dplyr::filter(n > 1) %>%
+  head(20)
 ```
+
+- We see that with the three variables `AUCTION_ID`, `SIZE`, and `PRICE`, we do not have a composite key to uniquely identify rows.
+- This could be party due to exact full-row duplicates (inspected next).
+
 
 > 3. Check for **full-row duplicates** using `dplyr::distinct()` or by counting occurrences across all columns.
 
-```{r}
-# Your code here
+```{r full-row-duplicate-check}
+# Total number of rows in dataset
+n_rows <- nrow(bids_raw)
 
+# Number of distinct rows across all columns
+n_rows_distinct <- bids_raw %>%
+  dplyr::distinct() %>%
+  nrow()
+
+# Number of exact duplicate rows
+n_exact_duplicates <- n_rows - n_rows_distinct
+
+cat("Total rows:                      ", n_rows, "\n")
+cat("Distinct rows (all columns):      ", n_rows_distinct, "\n")
+cat("Exact duplicate rows (by count):  ", n_exact_duplicates, "\n")
 ```
+
+- We see that we have 2,434 rows which are exact duplicates.
+
 
 > 4. Decide on a rule for handling duplicates:
 >    - Drop exact duplicates?
 >    - Keep first occurrence and drop the rest?
 >    - Something else?
+
+- We will drop full duplicate rows, keeping a single row in each set of duplicates.
+
+
 > 5. Implement your rule and create a de-duplicated dataset (e.g., `bids_nodup`).
 
-```{r}
-# Your code here
+```{r create-bids-nodup}
+# Remove exact full-row duplicates (keep one copy)
+bids_nodup <- bids_raw %>%
+  distinct()
 
+cat("Rows in original dataset:   ", nrow(bids_raw), "\n")
+cat("Rows in bids_nodup dataset: ", nrow(bids_nodup), "\n")
 ```
 
+- We now have a count of **441,535 rows**, which matches the number of distinct rows in the raw data.
+
+We can now re-check our initial candidate for a composite key:
+
+```{r candidate-key-recheck}
+# Candidate composite key: AUCTION_ID + SIZE + PRICE
+
+# Compare rows vs. distinct by composite key
+bids_nodup %>%
+  dplyr::summarise(
+    n_rows         = dplyr::n(),
+    n_unique_key   = dplyr::n_distinct(AUCTION_ID, SIZE, PRICE)
+  )
+
+# Show composite key rows that appear more than once
+candidate_key_counts <- bids_nodup %>%
+  dplyr::count(AUCTION_ID, SIZE, PRICE, sort = TRUE)
+
+candidate_key_counts %>%
+  dplyr::filter(n > 1) %>%
+  head(20)
+```
+
+- Although we have removed full duplicate rows, this particular set of variables still does not work as a composite key for unique row identification.
+
+We can create a helper function to allow us to search available variables for a combination which will work as a key. To avoid computational blowout, we focus only on variables which logically make the most sense and limit our number of variables per composite key to 4:
+
+```{r composite-key-helper}
+check_candidate_keys <- function(data, cols, max_size = 4, show_full = TRUE) {
+  results <- list()
+  idx <- 1L
+  
+  for (k in seq_len(max_size)) {
+    combos <- combn(cols, k, simplify = FALSE)
+    
+    for (combo in combos) {
+      n_unique <- data %>%
+        distinct(across(all_of(combo))) %>%
+        nrow()
+      
+      results[[idx]] <- tibble(
+        combo   = paste(combo, collapse = " + "),
+        size    = k,
+        n_rows  = nrow(data),
+        n_unique = n_unique,
+        is_key  = (n_unique == nrow(data))
+      )
+      idx <- idx + 1L
+    }
+  }
+  
+  results <- bind_rows(results)
+  
+  if (show_full) {
+    # Full table (shown if needed for further exploration)
+    results %>%
+      arrange(desc(is_key), size, desc(n_unique))
+  } else {
+    # Compact summary
+    results %>%
+      group_by(size) %>%
+      summarise(
+        num_combos   = n(),
+        num_keys     = sum(is_key),
+        max_n_unique = max(n_unique),
+        .groups = "drop"
+      ) %>%
+      arrange(size)
+  }
+}
+```
+
+
+We then use this function to check the most likely candidate variables:
+
+```{r composite-key-search}
+composite_candidates <- c(
+  "AUCTION_ID",
+  "SIZE",
+  "PRICE",
+  "RESPONSE_TIME",
+  "BID_WON",
+  "PUBLISHER_ID",
+  "DEVICE_TYPE",
+  "DEVICE_GEO_CITY",
+  "DEVICE_GEO_ZIP",
+  "DEVICE_GEO_LAT",
+  "DEVICE_GEO_LONG",
+  "TIMESTAMP"
+)
+
+key_results <- check_candidate_keys(
+  data     = bids_nodup,
+  cols     = composite_candidates,
+  max_size = 4,
+  show_full = FALSE
+)
+
+key_results
+```
+
+- From these results, we can see that no combination (up to four variables) of these candidate variables will create a composite key to uniquely identify the rows of this dataset. The **maximum number of unique rows in any combination was 441,172**, but our dataset with no full-row duplicates is 441,535.
+
+
 > 6. In 2–3 sentences, explain your choice and connect it to the **uniqueness** dimension of data quality.
+
+Our main design choice for improving the **uniqueness** dimension was to remove exact full-row duplicates, keeping one copy of each identical record to avoid double-counting while preserving all genuinely different rows. 
+After removing these duplicates, we searched for single-column and composite keys (up to four candidate fields) and found that none of our tested combinations uniquely identifies every row. The data dictionary’s grain definition depends on missing bidder/seat fields.
+Thus, we can enforce uniqueness only by eliminating exact duplicates, not by defining a true primary key from the available columns.
+
 
 ## Out-of-range latitude/longitude (optional but recommended)
 
@@ -415,36 +577,191 @@ Look at `DEVICE_GEO_LAT` and `DEVICE_GEO_LONG`.
 > **Tasks:**
 >
 > 1. Use `summary()` or `dplyr::summarise()` to get the minimum and maximum latitude and longitude.
-
-```{r}
-# Your code here
-
-```
-
+>
 > 2. Compare the ranges to what you know about **Oregon’s** geographic coordinates (you can approximate based on general US geography; no need for exact boundaries).
-
-```{r}
-# Your code here
-
-```
-
+>
 > 3. Decide which coordinates are clearly **implausible**.
 
-```{r}
-# Your code here
+Using Oregon’s approximate bounds (according to "MapsofTheWorld.com"):
+
+- Latitude: **$42^\circ$ N to $46.15^\circ$ N**  
+- Longitude: **$-124.3^\circ$ W to $-116.45^\circ$ W**
+
+(We allow a small buffer around these ranges to avoid accidentally marking
+borderline-but-valid values as invalid.)
+
+```{r lat-long-summary, message=FALSE}
+# Added slight buffers to values
+latlong_summary <- bids_nodup %>%
+  summarise(
+    n_rows          = n(),
+    min_lat         = min(DEVICE_GEO_LAT, na.rm = TRUE),
+    max_lat         = max(DEVICE_GEO_LAT, na.rm = TRUE),
+    n_lat_outside   = sum(DEVICE_GEO_LAT < 41    | DEVICE_GEO_LAT > 47,     na.rm = TRUE),
+    min_long        = min(DEVICE_GEO_LONG, na.rm = TRUE),
+    max_long        = max(DEVICE_GEO_LONG, na.rm = TRUE),
+    n_long_outside  = sum(DEVICE_GEO_LONG < -125 | DEVICE_GEO_LONG > -116, na.rm = TRUE),
+    n_long_10_over  = sum(DEVICE_GEO_LONG < -121 & DEVICE_GEO_LONG > -127.5, na.rm = TRUE)
+  )
+
+latlong_summary %>%
+  kable(caption = "Lat/long values compared to approximate Oregon bounds") %>%
+  kable_styling(full_width = FALSE,
+                bootstrap_options = c("striped"))
+```
+
+  - Exactly 100 of rows have **longitudes** outside Oregon’s expected range (exact 100 implies an added "bomb"). 
+  - We also see that the majority of the points lie about 10 degrees over from these shifted values (Final output column: tested by checking number of points in small range about 10 degrees away). This implies an exact shift of 10 for these 100 points. 
+  
+To justify correcting these 100 shifted longitudinal values, we compare suspicious rows ("bad longitudes") to the valid ones ("good longitudes") using `DEVICE_GEO_ZIP` and `DEVICE_GEO_CITY`
+
+```{r id-shifted-rows}
+# ID the "bad longitude" rows
+bad_long <- bids_nodup %>%
+  filter(DEVICE_GEO_LONG < -125 | DEVICE_GEO_LONG > -116)
+
+# ID the "good longitude" rows
+good_long <- bids_nodup %>%
+  filter(DEVICE_GEO_LONG >= -125 & DEVICE_GEO_LONG <= -116)
+
+# Verify count of "bad longitude" rows is 100
+nrow(bad_long)
 
 ```
+```{r check-shift}
+# Verify shift will put "bad longitude" rows in bounds
+bad_long_shift_check <- bad_long %>%
+  mutate(long_shifted = DEVICE_GEO_LONG + 10) %>%
+  summarise(
+    n_rows                = n(),
+    min_long_orig         = min(DEVICE_GEO_LONG, na.rm = TRUE),
+    max_long_orig         = max(DEVICE_GEO_LONG, na.rm = TRUE),
+    min_long_shifted      = min(long_shifted, na.rm = TRUE),
+    max_long_shifted      = max(long_shifted, na.rm = TRUE),
+    n_shifted_in_bounds   = sum(long_shifted >= -125 & long_shifted <= -116, na.rm = TRUE)
+  )
+
+bad_long_shift_check
+```
+We see that *all shifted values* fall within the Oregon range for longitude. 
+
+To verify via **Zip** and **City**, we first check to see how many of the 100 have `DEVICE_GEO_CITY` and `DEVICE_GEO_ZIP` data available:
+
+```{r bad-long-na-check}
+bad_long %>%
+  summarise(
+    n_bad         = n(),
+    n_zip_city_ok = sum(!is.na(DEVICE_GEO_ZIP) & !is.na(DEVICE_GEO_CITY)),
+    n_zip_na      = sum(is.na(DEVICE_GEO_ZIP)),
+    n_city_na     = sum(is.na(DEVICE_GEO_CITY))
+  )
+```
+
+We see that **98 of the 100** rows have `DEVICE_GEO_CITY` and `DEVICE_GEO_ZIP` data available. We first address those rows.
+
+```{r zip-city-shift-check}
+# Collapse "good" longitudes to one reference value per ZIP + CITY
+good_zipcity <- good_long %>%
+  filter(!is.na(DEVICE_GEO_ZIP), !is.na(DEVICE_GEO_CITY)) %>%
+  group_by(DEVICE_GEO_ZIP, DEVICE_GEO_CITY) %>%
+  summarise(
+    ref_long = mean(DEVICE_GEO_LONG, na.rm = TRUE),
+    .groups  = "drop"
+  )
+
+# Join bad rows (w/ valid ZIP + CITY) to these reference values
+paired_zipcity <- bad_long %>%
+  filter(!is.na(DEVICE_GEO_ZIP), !is.na(DEVICE_GEO_CITY)) %>%
+  left_join(
+    good_zipcity,
+    by = c("DEVICE_GEO_ZIP", "DEVICE_GEO_CITY")
+  ) %>%
+  mutate(diff_long = ref_long - DEVICE_GEO_LONG)
+
+# Summarise differences
+paired_zipcity %>%
+  summarise(
+    n_bad_with_match = sum(!is.na(ref_long)),
+    min_diff         = min(diff_long, na.rm = TRUE),
+    max_diff         = max(diff_long, na.rm = TRUE),
+    mean_diff        = mean(diff_long, na.rm = TRUE),
+    n_near_10        = sum(abs(diff_long - 10) < 0.1, na.rm = TRUE)
+  )
+```
+
+These results **justify the 10 degree shift** for these 98 values.
+
+We now address the 2 values which `NA` for `DEVICE_GEO_CITY` and `DEVICE_GEO_ZIP`. We compare these to other rows with the same `AUCTION_ID`:
+
+```{r auction-shift-check-clean, message=FALSE}
+# Identify bad rows with missing ZIP/CITY
+bad_missing_loc <- bad_long %>%
+  filter(is.na(DEVICE_GEO_ZIP) | is.na(DEVICE_GEO_CITY))
+
+# Reference longitudes for each auction (from good rows)
+good_auction <- good_long %>%
+  group_by(AUCTION_ID) %>%
+  summarise(ref_long_auction = mean(DEVICE_GEO_LONG, na.rm = TRUE),
+            .groups = "drop")
+
+# Join & compute shift difference
+auction_shift_check <- bad_missing_loc %>%
+  left_join(good_auction, by = "AUCTION_ID") %>%
+  mutate(diff_long = ref_long_auction - DEVICE_GEO_LONG) %>%
+  select(
+    AUCTION_ID,
+    DEVICE_GEO_LAT,
+    DEVICE_GEO_LONG,
+    ref_long_auction,
+    diff_long
+  )
+
+auction_shift_check %>%
+  kable(caption = "Two NA-location rows with auction-based longitude comparison") %>%
+  kable_styling(full_width = FALSE,
+                bootstrap_options = c("striped"))
+```
+
+These results show these two rows are **shifted exactly 10 degrees** from the other longitude values of rows with the same respective `AUCTION_ID`, justifying a shift for these rows as well.
+
 
 > 4. Define rules to create cleaned versions (e.g., `DEVICE_GEO_LAT_clean`, `DEVICE_GEO_LONG_clean`) where:
 >    - Plausible values are kept,
 >    - Implausible values are set to `NA` or corresponding rows are removed.
 
-```{r}
-# Your code here
+- All `DEVICE_GEO_LAT` values are within plausible Oregon range.
+    - Transfer as-is to `DEVICE_GEO_LAT_clean`.
+- There are **100 rows** with `DEVICE_GEO_LONG` outside of a plausible Oregon range.
+    - 98 of these 100 have rows with matching `DEVICE_GEO_CITY` and `DEVICE_GEO_ZIP` which show an exact 10 degree shift in longitude.
+    - Remaining 2 rows show all matching `AUCTION_ID`s have exact 10 degree shift in longitudinal values.
+    - These justify a **10 degree shift for all 100 out-of-bounds longitudinal values** for `DEVICE_GEO_LONG_clean`.
 
+```{r lat-long-clean-final}
+bids_nodup <- bids_nodup %>%
+  mutate(
+    # Latitude: requires no correction
+    DEVICE_GEO_LAT_clean = DEVICE_GEO_LAT,
+    
+    # Longitude: correct the 100 shifted values
+    DEVICE_GEO_LONG_clean = case_when(
+      DEVICE_GEO_LONG < -125 | DEVICE_GEO_LONG > -116 ~ DEVICE_GEO_LONG + 10,
+      TRUE ~ DEVICE_GEO_LONG
+    )
+  )
+
+# Verify all rows now have valid Oregon longitude values
+bids_nodup %>%
+  summarise(
+    n_rows = n(),
+    n_long_outside_clean =
+      sum(DEVICE_GEO_LONG_clean < -125 | DEVICE_GEO_LONG_clean > -116)
+  )
 ```
 
 > 5. Document the rules you used and why.
+
+- All **latitude values** were already within Oregon’s expected range ($42^\circ$ N to $46.15^\circ$ N), so they were **kept as-is**.
+- Exactly **100 longitude values were shifted by $+10^\circ$** based on ZIP/city matching and auction-level comparisons. Correcting these restored them to plausible Oregon coordinates ($-124.3^\circ$ W to $-116.45^\circ$ W).
 
 # Creating a Final Cleaned Dataset (10–15 minutes)
 
@@ -487,9 +804,12 @@ Use the template below and fill it in with your team’s work. **One row (PRICE)
 
 | Variable | Problem Detected (brief) | Data Quality Dimension(s) | Cleaning Action (brief) |
 |----------|-------------------------|---------------------------|--------------------------|
+| <FULL DATASET> | full-row duplicates | uniqueness | removed duplicates while maintaining single copy of each identical row |
 | PRICE | Includes non-numeric characters | Validity | Extract numeric portion and convert to numeric |
 | DEVICE_GEO_REGION | *(team describes)* | *(team selects)* | *(team describes)* |
 | DEVICE_GEO_ZIP | *(team describes)* | *(team selects)* | *(team describes)* |
+| DEVICE_GEO_LAT | NONE: All values verified to be within plausible Oregon range | Validity, Accuracy | Copied into DEVICE_GEO_LAT_clean as-is |
+| DEVICE_GEO_LONG | 100 values outside Oregon plausible range | Validity, Accuracy | Shifted 100 values by 10 degrees (justifications above) |
 | RESPONSE_TIME | *(team describes)* | *(team selects)* | *(team describes)* |
 | TIMESTAMP | *(team describes)* | *(team selects)* | *(team describes)* |
 | Other variable(s) | *(optional)* | *(optional)* | *(optional)* |
