@@ -74,10 +74,6 @@ bids_raw <- read_parquet("../data/bids_data_vDTR.parquet")
 
 ```
 
-```{r}
-distinct("AUCTION_ID")
-```
-
 # Quick Orientation Check (10–15 minutes)
 
 Using your prior lab work and Data Cleaning lectures:
