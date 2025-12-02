@@ -14,15 +14,37 @@ All data must be stored **locally** by team members following the structure desc
 
 # Repository Structure
 ```
-README.md                       # Currently document
+README.md                       # Current document
 
 Lab01_Collab/
 │
-└── Lab01_TeamCollabSetup.md    # Lab 1
-
-Lab02_Collab/
+├── images/                      
+│   └── ...                     # (Kanban board images kept here)
 │
-└── Lab01_DataMinipVis.md       # Lab 2
+├── Lab01_TeamCollabSetup.md    # Lab 1
+│
+└── Lab01_TeamCollabSetup.html
+
+
+Lab02_DataManipVis/
+│
+├── planning/                      
+│   └── ...                     # (Kanban board images kept here)
+│
+├── Lab_Coding.Rmd              # Lab 2
+│
+└── Lab_Coding.html
+
+
+Lab03_DataCleaning/
+│
+├── planning/                      
+│   └── ...                     # (Kanban board images kept here)
+│
+├── Lab01_DataCleaning.Rmd     # Lab 3
+│
+└── Lab01_DataCleaning.html
+
 
 TeamDocuments/
 │
@@ -42,15 +64,55 @@ TeamDocuments/
 Instead, create a local directory. Rather than use our project's `data_io.R` scripts, we will simply add the appropriate lines of code to each lab which needs to access the data. Please add the data from the class's Canvas page into a local directory as shown below:
 
 ```
-README.md                       # Currently document
+README.md                       # Current document
 
 Lab01_Collab/
 │
-└── Lab01_TeamCollabSetup.md    # Lab 1
-
-Lab02_Collab/
+├── images/                      
+│   └── ...                     # (Kanban board images kept here)
 │
-└── Lab01_DataMinipVis.md       # Lab 2
+├── Lab01_TeamCollabSetup.md    # Lab 1
+│
+└── Lab01_TeamCollabSetup.html
+
+
+Lab02_DataManipVis/
+│
+├── planning/                      
+│   └── ...                     # (Kanban board images kept here)
+│
+├── Lab_Coding.Rmd              # Lab 2
+│
+└── Lab_Coding.html
+
+
+Lab03_DataCleaning/
+│
+├── planning/                      
+│   └── ...                     # (Kanban board images kept here)
+│
+├── Lab01_DataCleaning.Rmd     # Lab 3
+│
+└── Lab01_DataCleaning.html
+
+
+│
+├── scripts/
+│   ├── data_io.R                     # Data loading/export utilities
+│   └── ...                           # (future scripts here)
+│
+├── notebooks/
+│   └── ...                           # Rmd files for EDA / analysis
+│
+├── results/
+│   └── ...                           # Figures, tables, summaries
+│
+├── reports/
+│   └── ...                           # Final written deliverables
+│
+└── README.md 
+
+
 
 data/
 │
