@@ -118,6 +118,7 @@ You should investigate:
 > 1.  Check the **type** of `PRICE` and inspect a sample of values (e.g., using `sample()` or `head()`).
 
 ```{r}
+bids <- bids_raw
 typeof(bids$PRICE)
 head(bids$PRICE)
 ```
@@ -145,11 +146,10 @@ Create a **cleaned numeric version** (e.g., `PRICE_clean`) that:
 >     To learn about their use, type `?` before either of them (e.g., `?readr::parse_number()`)
 
 ```{r}
-bids_new <- mutate(.data=bids, PRICE_clean=PRICE)
+bids_new <- select(.data=mutate(.data=bids, PRICE_clean=PRICE), -PRICE)
 idx <- which(substr(bids_new$PRICE_clean, 1, 1)=="O")
 bids_new$PRICE_clean[idx] <- sub("^O", "0", bids_new$PRICE_clean[idx])
 bids_new <- mutate(.data=bids_new, PRICE_clean=as.numeric(PRICE_clean))
-rm(idx)
 bids_new <- mutate(.data=bids_new, PRICE_clean=if_else(PRICE_clean==-999, NA, PRICE_clean))
 ```
 
@@ -177,15 +177,20 @@ Now decide how to handle:
 ```{r}
 # Your code here
 summary(bids_new$PRICE_clean)
-nrow(filter(.data=bids_new, PRICE_clean > 50)) / nrow(bids_new) * 100 # % of values greater than 50.
-nrow(filter(.data=bids_new, PRICE_clean < 0.0001)) / nrow(bids_new) * 100 # % of values less than 0.0001.
+filter(.data=bids, as.numeric(PRICE) < 0)$PRICE
+filter(.data=bids, as.numeric(PRICE) == -999)$PRICE
+bids$PRICE[idx]
+rm(idx)
 ```
 
 > 2.  Write down your **rules** for how to handle each type (e.g., set to `NA`, drop rows, cap values).
 
-Though it is uncommon for there to be CPM values greater than 50, it is not implausible. However, given that it makes up a small percentage of the data (0.0227%), we can remove them without much impact to the overall data set. There is one thing to note when removing any rows, is that it would impact the individual analysis of certain auctions that have taken place in the dataset (i.e. an auction with potentially 2 bids, now only has one bid, and the other bid did not win, leaving this to be a winless auction). Similarly, though it is uncommon for incredibly small CPM values (close to 0; less than 0.0001), it is not implausible, but given that it is such a small percentage (0.000675%). What had been done prior to this section include removing irretrievable data values (-999). We can validate reverse negation using histograms representing the distribution of newly modified PRICE_clean.
+It is uncommon for there to be CPM values greater than 50 or less than 0.001, but it is not implausible. What had been done prior to this section include removing irretrievable data values (-999). We can validate reverse negation using histograms representing the distribution of newly modified PRICE_clean.
 
 ```{r}
+nrow(filter(.data=bids_new, PRICE_clean > 50)) / nrow(bids_new) * 100 # % of values greater than 50.
+nrow(filter(.data=bids_new, PRICE_clean < 0.0001)) / nrow(bids_new) * 100 # % of values less than 0.0001.
+
 set.seed(123)
 hist(sample(bids_new$PRICE_clean, size=1000, replace=FALSE), breaks=150, xlim=c(0, 3))
 hist(filter(.data=bids_new, PRICE_clean < 0)$PRICE_clean, breaks=50, xlim=c(0, -3))
@@ -195,7 +200,6 @@ hist(filter(.data=bids_new, PRICE_clean < 0)$PRICE_clean, breaks=50, xlim=c(0, -
 ```{r}
 # Your code here
 bids_new <- mutate(.data=bids_new, PRICE_clean=if_else(PRICE_clean < 0, -PRICE_clean, PRICE_clean))
-bids <- filter(.data=bids_new, PRICE_clean < 50, PRICE_clean > 0.0001, !is.na(PRICE_clean))
 ```
 
 > 4.  Briefly describe your rules in text and justify them using the **validity** and **completeness** dimensions of data quality.
