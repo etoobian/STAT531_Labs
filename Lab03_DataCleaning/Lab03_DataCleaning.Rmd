@@ -151,6 +151,7 @@ idx <- which(substr(bids_new$PRICE_clean, 1, 1)=="O")
 bids_new$PRICE_clean[idx] <- sub("^O", "0", bids_new$PRICE_clean[idx])
 bids_new <- mutate(.data=bids_new, PRICE_clean=as.numeric(PRICE_clean))
 bids_new <- mutate(.data=bids_new, PRICE_clean=if_else(PRICE_clean==-999, NA, PRICE_clean))
+rm(idx)
 ```
 
 > 2.  Count how many `NA`s you get in `PRICE_clean`. Explain why some values might be `NA` after parsing.
@@ -177,15 +178,17 @@ Now decide how to handle:
 ```{r}
 # Your code here
 summary(bids_new$PRICE_clean)
+idx <- which(substr(bids$PRICE, 1, 1)=="O")
 filter(.data=bids, as.numeric(PRICE) < 0)$PRICE
 filter(.data=bids, as.numeric(PRICE) == -999)$PRICE
+filter(.data=bids_new, PRICE_clean <= 0.0001, PRICE_clean >= 0, BID_WON=="TRUE" | BID_WON=="true")
 bids$PRICE[idx]
 rm(idx)
 ```
 
 > 2.  Write down your **rules** for how to handle each type (e.g., set to `NA`, drop rows, cap values).
 
-It is uncommon for there to be CPM values greater than 50 or less than 0.001, but it is not implausible. What had been done prior to this section include removing irretrievable data values (-999). We can validate reverse negation using histograms representing the distribution of newly modified PRICE_clean.
+It is uncommon for there to be CPM values greater than 50 or less than 0.0001, but it is not implausible. What had been done prior to this section include removing irretrievable data values (-999). We can validate reverse negation using histograms representing the distribution of newly modified PRICE_clean.
 
 ```{r}
 nrow(filter(.data=bids_new, PRICE_clean > 50)) / nrow(bids_new) * 100 # % of values greater than 50.
