@@ -225,12 +225,12 @@ bids$PRICE_clean[idx] <- sub("^O", "0", bids$PRICE_clean[idx])
 
 # Convert to numeric (will handle scientific notation)
 bids <-
-  mutate(.data = bids, PRICE_clean = supressWarnings(as.numeric(PRICE_clean)))
+  mutate(.data = bids, PRICE_clean = suppressWarnings(as.numeric(PRICE_clean)))
 
 # Convert sentinel (-999) to NA
 bids <-
   mutate(.data = bids,
-         PRICE_clean = if_else(PRICE_clean == -999, NA, PRICE_clean))
+         PRICE_clean = if_else(PRICE_clean == -999, NA_real_, PRICE_clean))
 
 # Remove helper index
 rm(idx)
@@ -256,42 +256,111 @@ Now decide how to handle:
 >
 > 1.  Use `dplyr::filter()` and summaries (`summary()`, `quantile()`) to identify at least **two kinds** of “bad” price values.
 
-```{r}
-# Your code here
-summary(bids_new$PRICE_clean)
-idx <- which(substr(bids$PRICE, 1, 1)=="O")
-filter(.data=bids, as.numeric(PRICE) < 0)$PRICE
-filter(.data=bids, as.numeric(PRICE) == -999)$PRICE
-filter(.data=bids_new, PRICE_clean <= 0.0001, PRICE_clean >= 0, BID_WON=="TRUE" | BID_WON=="true")
-bids$PRICE[idx]
-rm(idx)
+```{r identify-bad-price}
+# Summarize PRICE_clean
+summary(bids$PRICE_clean)
+
+# Identify negative prices (still present in PRICE_clean)
+neg_prices <- bids %>% filter(PRICE_clean < 0)
+
+# Identify very small (non-negative) prices
+small_prices <- bids %>% filter(PRICE_clean <= 0.0001, PRICE_clean >= 0)
+
+# Identify very large prices
+large_prices <- bids %>% filter(PRICE_clean > 50)
+
+# Create summary table of counts
+bad_price_summary <- tibble(
+  category = c(
+    "Negative prices",
+    "Negative prices & BID_WON == TRUE",
+    "Small (<= 0.0001)",
+    "Small (<= 0.0001) & BID_WON == TRUE",
+    "Large (> 50)",
+    "Large (> 50) & BID_WON == TRUE"
+  ),
+  n_rows = c(
+    nrow(neg_prices),
+    sum(neg_prices$BID_WON %in% c("TRUE", "true")),
+    nrow(small_prices),
+    sum(small_prices$BID_WON %in% c("TRUE", "true")),
+    nrow(large_prices),
+    sum(large_prices$BID_WON %in% c("TRUE", "true"))
+  )
+)
+
+bad_price_summary %>%
+  kable("html", caption = "Summary of Identified Problematic PRICE Values") %>%
+  kable_styling(full_width = FALSE,
+                bootstrap_options = c("striped"))
 ```
+
+We have previously identified and handled "bad" prices for those with "O" and sentinels. From this output, we also see:
+
+  - There are still **100 negative values** to address, 27 of which are rows where `BIDS_WON == TRUE`.
+  - We have **3 very small values** ($\leq 0.0001$), none of which are rows where `BIDS_WON == TRUE`.
+  - We have **101 large values** ($> 50$), 23 of which are rows where `BIDS_WON == TRUE`.
 
 > 2.  Write down your **rules** for how to handle each type (e.g., set to `NA`, drop rows, cap values).
 
-It is uncommon for there to be CPM values greater than 50 or less than 0.0001, but it is not implausible. What had been done prior to this section include removing irretrievable data values (-999). We can validate reverse negation using histograms representing the distribution of newly modified PRICE_clean.
-
-```{r}
-nrow(filter(.data=bids_new, PRICE_clean > 50)) / nrow(bids_new) * 100 # % of values greater than 50.
-nrow(filter(.data=bids_new, PRICE_clean < 0.0001)) / nrow(bids_new) * 100 # % of values less than 0.0001.
-
-set.seed(123)
-hist(sample(bids_new$PRICE_clean, size=1000, replace=FALSE), breaks=150, xlim=c(0, 3))
-hist(filter(.data=bids_new, PRICE_clean < 0)$PRICE_clean, breaks=50, xlim=c(0, -3))
+We can also analyze the percentage of values that are very small or very large.
+```{r }
+nrow(small_prices) / nrow(bids) * 100 # % of values <= 0.0001
+nrow(large_prices) / nrow(bids) * 100 # % of values > 50
 ```
+
+We can attempt validate reverse negation using histograms representing the distribution of newly modified `PRICE_clean`.
+```{r price-neg-hist}
+set.seed(123)
+par(mfrow = c(1, 2))
+
+hist(
+  sample(bids$PRICE_clean, size = 1000, replace = FALSE),
+  main = "Hist of Overall Prices",
+  xlab = "Overall Prices",
+  breaks = 150,
+  xlim = c(0, 3)
+)
+hist(
+  neg_prices$PRICE_clean,
+  main = "Hist of Negative Prices",
+  xlab = "Negative Prices",
+  breaks = 50,
+  xlim = c(0, -3)
+)
+par(mfrow = c(1, 1))
+```
+
+- **Row with "O"**
+    - In prior sections, we accounted for the single row with a typo of "O" by changing to "0".
+- **Sentinels**
+    - We converted irretrievable data values (-999) to "NA", but do not remove rows. 
+- **Very Large/Small**
+    - It is uncommon for there to be CPM values greater than 50 or less than 0.0001, but it is not implausible. 
+    - Considering the existence of `BIDS_WON == TRUE`, these values may be correct and will be left in yet noted as possible outliers.
+- **Remaining Negative Values**
+    - The 100 remaining negative price values follow roughly the same distribution as the overall data in this variable (aside from a few points).
+    - They also have 27 rows where `BIDS_WON == TRUE`, further justifying a negation switch.
+    - These values will be negated back to positive values.
+
 > 3.  Implement those rules in a new variable (e.g., `PRICE_final`) using `dplyr::mutate()` and `dplyr::case_when()`.
 
-```{r}
-# Your code here
-bids_new <- mutate(.data=bids_new, PRICE_clean=if_else(PRICE_clean < 0, -PRICE_clean, PRICE_clean))
+```{r price-final}
+# NOTE: "O" row and sentinels handled earlier, large/small values left as-is
+bids <- bids %>%
+  mutate(
+    PRICE_final = case_when(
+      is.na(PRICE_clean) ~ NA_real_,      # Keep sentinel / malformed as NA
+      PRICE_clean < 0 ~ -PRICE_clean,     # Negate remaining neg. values to pos.
+      TRUE ~ PRICE_clean                  # All other prices values unchanged
+    )
+  )
 ```
 
 > 4.  Briefly describe your rules in text and justify them using the **validity** and **completeness** dimensions of data quality.
 
-Preferably, no data would have to be dropped, but when they do, some things should be looked into. Though all remaining values become valid (though that is based on subjectivity), you have to consider the completeness of the data. Since blocks (groups) can be formed via AUCTION_ID, you run the risk of removing data that was key to certain auctions (like the winning bid).
-
-
-
+- **Validity:**  We treat sentinel values and obvious encoding problems as invalid. The `-999` sentinel codes and any non-numeric encodings have already been converted to `NA` in `PRICE_clean`. For the remaining negative prices, we observed that their magnitudes follow roughly the same distribution as the positive prices and that several of these rows have `BID_WON == TRUE`. This supports the interpretation that these are sign errors rather than truly negative CPM bids, so in `PRICE_final` we negate those values back to positive.
+- **Completeness:** We deliberately avoid dropping rows whenever possible. Sentinel and malformed values remain in the dataset but with `PRICE_final = NA`, so the observations are still available for analyses that do not directly use price. For very small and very large positive prices, we keep the original values because they are rare but not clearly impossible, and some large prices correspond to winning bids. This choice preserves completeness while acknowledging that these extreme values may be treated as potential outliers in later modeling steps.
 
 
 # Cleaning Categorical & String Fields (30–40 minutes)
@@ -1051,7 +1120,7 @@ Use the template below and fill it in with your team’s work. **One row (PRICE)
 | Variable | Problem Detected (brief) | Data Quality Dimension(s) | Cleaning Action (brief) |
 |----------|-------------------------|---------------------------|--------------------------|
 | <FULL DATASET> | full-row duplicates | uniqueness | removed duplicates while maintaining single copy of each identical row |
-| PRICE | Includes non-numeric characters, negated values, non-digit characters (excludind '.'), negative sentinels | Validity, Completeness | Reverse negate applicable values, drop sentinels, convert to type numeric, drop extreme values |
+| **PRICE** | Non-numeric encodings ('O' instead of '0'), sentinel code -999, negative prices, rare extreme small/large values | Validity, Completeness | Fix typo ('O'to'0'); convert to numeric; map sentinel -999 to NA; negate remaining negative prices to positive values; retain extreme small/large positive prices as potential outliers |
 | DEVICE_GEO_REGION | Inconsistent forms ("OREGON", "XOR", lowercase, extra spaces/punctuation) | Consistency / Validity     | Trim, uppercase, remove punctuation; map "OR", "OREGON", "XOR" → "OR"; others → NA |
 | DEVICE_GEO_ZIP    | Sentinel codes (-999, 9999, 00000), non-digit chars, wrong length       | Validity / Accuracy        | Remove sentinels; trim; convert to character; pad to 5 digits; keep valid Oregon ZIPs (97xxx) |
 | DEVICE_GEO_LAT | NONE: All values verified to be within plausible Oregon range | Validity, Accuracy | Copied into DEVICE_GEO_LAT_clean as-is |
