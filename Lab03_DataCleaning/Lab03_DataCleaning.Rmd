@@ -447,12 +447,12 @@ This result justifies that `"xor"` is also representative of Oregon.
 
 We will standardize Oregon as `"OR"`:
 
-```{r}
+```{r region-clean}
 bids <- bids %>%
   mutate(
   # Standardize all Oregon variants to "OR"
     DEVICE_GEO_REGION_clean = dplyr::case_when(
-      bids$DEVICE_GEO_REGION %in% c("OR", "Or", "oregon", "xor") ~ "OR",
+      DEVICE_GEO_REGION %in% c("OR", "Or", "oregon", "xor") ~ "OR",
       TRUE ~ NA_character_
     )
   )
@@ -477,11 +477,16 @@ Treat ZIP codes as **strings**, not numbers.
 >
 > 1.  Convert ZIP codes to character and use `dplyr::count()` to inspect common values.
 
-```{r}
-# List the most common ZIP values (already stored as character)
+```{r zip-type}
+class(bids$DEVICE_GEO_ZIP)
+```
+
+Already character; no need to convert.
+
+```{r zip-count}
+# List the most common ZIP values
 bids %>%
   count(DEVICE_GEO_ZIP, sort = TRUE)
-
 ```
 
 > 2.  Identify suspicious ZIP values:
@@ -489,42 +494,42 @@ bids %>%
 >     -   Obvious sentinel codes (e.g., `-999`, `9999`),
 >     -   Non-digit characters.
 
-```{r}
-# Helper table for ZIP checks (used in Tasks 2–4)
+```{r zip-checks}
+# Helper table for ZIP checks
 bids_zip_check <- bids %>%
   mutate(
-    # 1) Normalize ZIP: trim spaces
-    zip_trim  = stringr::str_trim(zip_raw),
+    # Normalize ZIP: trim spaces
+    zip_trim  = stringr::str_trim(DEVICE_GEO_ZIP),
 
-    # 2) Length of the full ZIP string
+    # Length of the full ZIP string
     zip_length = stringr::str_length(zip_trim),
 
-    # 3) Sentinel codes we want to treat as invalid
+    # Sentinel codes
     is_sentinel = zip_trim %in% c("-999"),
 
-    # 4) Does the ZIP start with a negative sign?
+    # Check if ZIP start with a negative sign
     starts_negative = stringr::str_starts(zip_trim, "-"),
 
-    # 5) First 5 characters (candidate 5-digit ZIP)
+    # First 5 characters (candidate 5-digit ZIP)
     zip5 = stringr::str_sub(zip_trim, 1, 5),
 
-    # 6) Check that the first 5 chars are exactly 5 digits
+    # Check that the first 5 chars are exactly 5 digits
     zip5_is_digits = stringr::str_detect(zip5, "^[0-9]{5}$"),
 
-    # 7) Convert those 5 digits to integer (for range checks)
+    # Convert those 5 digits to integer (for range checks)
     zip5_int = dplyr::if_else(zip5_is_digits, as.integer(zip5), NA_integer_),
 
-    # 8) Oregon range check: 97001–97920
+    # Oregon range check: 97001–97920
     out_of_or_range = dplyr::if_else(
       !is.na(zip5_int) & (zip5_int < 97001L | zip5_int > 97920L),
       TRUE, FALSE
     ),
 
-    # 9) Any non-digit characters anywhere in the trimmed ZIP?
+    # Any non-digit characters anywhere in the trimmed ZIP?
     has_nondigit = !stringr::str_detect(zip_trim, "^[0-9-]+$")
   )
 
-# Task 2: show only *suspicious* ZIP patterns
+# Show only "suspicious" ZIP patterns
 suspicious_zips <- bids_zip_check %>%
   filter(
     zip_length < 5 | zip_length > 10 |   # too short / too long
@@ -536,15 +541,21 @@ suspicious_zips <- bids_zip_check %>%
   count(zip_trim, sort = TRUE)
 
 suspicious_zips
-
 ```
 
-> 3.  Decide on a **pattern** for valid ZIP codes (e.g., Oregon 5-digit ZIPs).
->     -   Consider using `stringr::str_length()`, `stringr::str_detect()` with a regular expression pattern, and `stringr::str_pad()` if necessary.
+Looking for suspicious zips we check: 
 
-```{r}
+  - Not length of 5
+  - Starts with a negative
+  - Has non-digit character in first 5 characters
+  - Out of range for Oregon Zip codes
+  - If it is a sentinel
+  
+From all of this, we find there are 18 rows with a Zip value of `-999` (sentinel).
 
-# Use the helper table from Task 2
+
+We check how many rows are invalid Oregon Zip codes:
+```{r zip-clean-check}
 bids_zip_check <- bids_zip_check %>%
   mutate(
     is_valid_oregon_zip =
@@ -556,18 +567,24 @@ bids_zip_check <- bids_zip_check %>%
   )
 
 bids_zip_check %>% count(is_valid_oregon_zip)
-
-
 ```
+
+This matches earlier output of **21,198 "NA" values** and **18 sentinel (`-999`) values**.
+($21,198 + 18 = 21,216$)
+
+> 3.  Decide on a **pattern** for valid ZIP codes (e.g., Oregon 5-digit ZIPs).
+>     -   Consider using `stringr::str_length()`, `stringr::str_detect()` with a regular expression pattern, and `stringr::str_pad()` if necessary.
+
+We will choose to standardize a pattern as **5-digit character strings** for valid Oregon Zips and "NA"s for invalid or sentinel values (`-999`). We will use the logic above when creating the cleaned ZIP variable.
 
 > 4.  Create a cleaned version (e.g., `DEVICE_GEO_ZIP_clean`) that:
 >     -   Trims whitespace,
 >     -   Converts sentinel codes to `NA`,
 >     -   Enforces your chosen ZIP pattern.
 
-```{r}
-# Final cleaned ZIP using the helper table (no repeated cleaning)
-bids <- bids_zip_check %>%
+```{r zip-final-clean}
+# Final cleaned ZIP using the helper table
+bids_zip_check <- bids_zip_check %>%
   mutate(
     DEVICE_GEO_ZIP_clean = if_else(
       is_valid_oregon_zip,
@@ -576,15 +593,18 @@ bids <- bids_zip_check %>%
     )
   )
 
+# Append `DEVICE_GEO_ZIP_clean` back onto `bids`
+bids <- bids %>%
+  mutate(DEVICE_GEO_ZIP_clean = bids_zip_check$DEVICE_GEO_ZIP_clean)
+
 # Look at the cleaned ZIP distribution to confirm the result
 bids %>%
   dplyr::count(DEVICE_GEO_ZIP_clean, sort = TRUE)
-
 ```
 
 > 5. In a short paragraph, describe your rule and why it is reasonable given the context (Oregon-only data).
 
-Our rule defines a valid ZIP code as a clean 5-digit Oregon ZIP between 97001 and 97920. Because the data only contains Oregon bids, any value outside this range cannot be real. After reviewing the raw ZIPs, we flagged issues such as sentinel values (-999), negative signs, non-digit characters, and incorrect lengths. We treated “-999” as NA because it is a negative, impossible ZIP value that falls outside Oregon’s valid bounds and clearly acts as a sentinel placeholder. After extracting the first five digits, we kept only values that passed all checks and set the rest to NA.
+Our rule defines a valid ZIP code as a clean 5-digit Oregon ZIP between 97001 and 97920. Because the data only contains Oregon bids, any value outside this range cannot be real. After reviewing the raw ZIPs, we flagged issues such as sentinel values `(-999)`, negative signs, non-digit characters, and incorrect lengths. We treated “-999” as NA because it is a negative, impossible ZIP value that falls outside Oregon’s valid bounds and clearly acts as a sentinel placeholder. After extracting the first five digits, we kept only values that passed all checks and set the rest to NA.
 
 ## RESPONSE_TIME: prefixes and extra characters
 
@@ -1154,8 +1174,8 @@ Use the template below and fill it in with your team’s work. **One row (PRICE)
 |----------|-------------------------|---------------------------|--------------------------|
 | <FULL DATASET> | full-row duplicates | uniqueness | removed duplicates while maintaining single copy of each identical row |
 | **PRICE** | Non-numeric encodings ('O' instead of '0'), sentinel code -999, negative prices, rare extreme small/large values | Validity, Completeness | Fix typo ('O'to'0'); convert to numeric; map sentinel -999 to NA; negate remaining negative prices to positive values; retain extreme small/large positive prices as potential outliers |
-| DEVICE_GEO_REGION | Inconsistent forms ("OREGON", "XOR", lowercase, extra spaces/punctuation) | Consistency / Validity     | Trim, uppercase, remove punctuation; map "OR", "OREGON", "XOR" → "OR"; others → NA |
-| DEVICE_GEO_ZIP    | Sentinel codes (-999, 9999, 00000), non-digit chars, wrong length       | Validity / Accuracy        | Remove sentinels; trim; convert to character; pad to 5 digits; keep valid Oregon ZIPs (97xxx) |
+| **DEVICE_GEO_REGION** | Inconsistent forms ("OREGON", "XOR", lowercase) | Consistency / Validity     | Map "OR", "or", "oregon", "xor" to "OR"; Sentinels to NA |
+| **DEVICE_GEO_ZIP**  | Sentinel codes (-999), non-digit chars, wrong length  | Validity / Accuracy        | Ssentinels to 'NA'; Trim to 5 digits; Keep valid Oregon ZIPs (97xxx) |
 | DEVICE_GEO_LAT | NONE: All values verified to be within plausible Oregon range | Validity, Accuracy | Copied into DEVICE_GEO_LAT_clean as-is |
 | DEVICE_GEO_LONG | 100 values outside Oregon plausible range | Validity, Accuracy | Shifted 100 values by 10 degrees (justifications above) |
 | RESPONSE_TIME     | Prefix "RESPONSE_TIME:" and trailing non-digit characters                | Validity                   | Remove prefix; strip non-digit endings; convert to numeric; invalid → NA        |
