@@ -132,14 +132,70 @@ You should investigate:
 > 1.  Check the **type** of `PRICE` and inspect a sample of values (e.g., using `sample()` or `head()`).
 
 ```{r}
-bids <- bids_raw
 typeof(bids$PRICE)
 head(bids$PRICE)
 ```
 
+The bids are as 'character' type. We investigate the characters in these strings.
+
+```{r price-characters}
+# Investigate all unique characters present in PRICE strings
+chars <- strsplit(bids$PRICE, split = "")
+unique_chars <- sort(unique(unlist(chars)))
+unique_chars
+```
+
+We see there are negative values ('-'), likely some values in scientific notation ('e'), and likely typos ('O').
+We investigate each of these individually.
+
+Inspect rows with "O" prefix:
+```{r price-investigate-O}
+# Rows with the letter O
+O_rows <- bids %>% filter(str_detect(PRICE, "O"))
+head(O_rows$PRICE)
+nrow(O_rows)
+```
+
+One row has a typo where `PRICE` begins with a 'O' rather than '0'.
+
+Inspect rows containing 'e' (possible scientific notation):
+```{r price-investigate-e}
+e_rows <- bids %>% filter(str_detect(PRICE, "e"))
+head(e_rows$PRICE)
+nrow(e_rows)
+```
+
+Three rows are in scientific notation.
+
+Inspect rows with negative sign '-':
+```{r price-investigate-neg}
+neg_rows <- bids %>% filter(str_detect(PRICE, "-"))
+head(neg_rows$PRICE)
+nrow(neg_rows)
+```
+
+There are 115 rows with "-". Since there are so many, we will investigate these further.
+
+```{r price-inspect-negatives}
+# Count how often each negative value appears
+table(neg_rows$PRICE)
+```
+
+From this we see:
+
+  - 3 values in scientific notation
+  - 12 values as '-999', likely a flag
+  - 100 values as negative versions of plausible prices
+
 > 2.  In short sentences, describe what you see:
 >     -   Is `PRICE` numeric or character? PRICE should be of the numeric type.
->     -   Do you see obvious anomalies or strange values? There exists a value of PRICE such that the initial 0 is a O, there are negative values, values that have been set beyond retrievability.
+>     -   Do you see obvious anomalies or strange values? 
+
+  - `PRICE` is currently stored as a 'character' variable, even though it should be 'numeric'. 
+  - There exists a single value of `PRICE` such that the initial '0' is a 'O', indicating a likely typo.
+  - There are 3 rows which are written in scientific notation with 'e'.
+  - There are 12 negative values of '-999', which appears to function as a sentinel code.
+  - There are 100 values which are negative versions of plausible prices, suggesting they may be corrupted numerical entries.
 
 ## Create a clean numeric version of PRICE
 
@@ -160,18 +216,17 @@ Create a **cleaned numeric version** (e.g., `PRICE_clean`) that:
 >     To learn about their use, type `?` before either of them (e.g., `?readr::parse_number()`)
 
 ```{r}
-bids_new <- select(.data=mutate(.data=bids, PRICE_clean=PRICE), -PRICE)
-idx <- which(substr(bids_new$PRICE_clean, 1, 1)=="O")
-bids_new$PRICE_clean[idx] <- sub("^O", "0", bids_new$PRICE_clean[idx])
-bids_new <- mutate(.data=bids_new, PRICE_clean=as.numeric(PRICE_clean))
-bids_new <- mutate(.data=bids_new, PRICE_clean=if_else(PRICE_clean==-999, NA, PRICE_clean))
+bids <- select(.data=mutate(.data=bids, PRICE_clean=PRICE), -PRICE)
+idx <- which(substr(bids$PRICE_clean, 1, 1)=="O")
+bids$PRICE_clean[idx] <- sub("^O", "0", bids$PRICE_clean[idx])
+bids <- mutate(.data=bids_new, PRICE_clean=as.numeric(PRICE_clean))
+bids <- mutate(.data=bids_new, PRICE_clean=if_else(PRICE_clean==-999, NA, PRICE_clean))
 rm(idx)
 ```
 
 > 2.  Count how many `NA`s you get in `PRICE_clean`. Explain why some values might be `NA` after parsing.
 
 ```{r}
-# Your code here
 sum(is.na(bids_new$PRICE_clean))
 ```
 
@@ -222,6 +277,10 @@ bids_new <- mutate(.data=bids_new, PRICE_clean=if_else(PRICE_clean < 0, -PRICE_c
 > 4.  Briefly describe your rules in text and justify them using the **validity** and **completeness** dimensions of data quality.
 
 Preferably, no data would have to be dropped, but when they do, some things should be looked into. Though all remaining values become valid (though that is based on subjectivity), you have to consider the completeness of the data. Since blocks (groups) can be formed via AUCTION_ID, you run the risk of removing data that was key to certain auctions (like the winning bid).
+
+
+
+
 
 # Cleaning Categorical & String Fields (30–40 minutes)
 
