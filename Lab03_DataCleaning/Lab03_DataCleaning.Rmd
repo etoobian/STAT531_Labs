@@ -385,41 +385,74 @@ Helpful string tools:
 >
 > 1.  Use `dplyr::count(DEVICE_GEO_REGION, sort = TRUE)` to list distinct region values and their frequencies.
 
-```{r}
-bids <- bids_raw
+```{r region-count}
 # Count all unique region values and sort them by frequency
 bids %>%
   dplyr::count(DEVICE_GEO_REGION, sort = TRUE)
-
-
 ```
 
 > 2.  Identify **all values** that clearly correspond to **Oregon**, just coded inconsistently (e.g., extra punctuation, different case, misspellings).
 
-```{r}
-# Inspect simplified versions of the region strings to identify Oregon variants
-bids <- bids %>%
-  dplyr::mutate(
-    region_trim  = stringr::str_trim(DEVICE_GEO_REGION),          # remove extra spaces
-    region_upper = stringr::str_to_upper(region_trim),            # convert to uppercase
-    region_clean = stringr::str_replace_all(region_upper, "[^A-Z]", "")  # keep letters only
+We see four values identified: `"OR"`, `"Or"`, `"oregon"`, and `"xor"`.  
+
+Although the first three (`"OR"`, `"Or"`, and `"oregon"`) can easily be justified as meaning Oregon, `"xor"` may mean Oregon or *NOT* Oregon.
+
+We investigate further by looking at the Zip codes of those rows:
+
+```{r region-xor-zips}
+# Inspect ZIP prefixes for rows where DEVICE_GEO_REGION looks like "xor"
+xor_zip_summary <- bids %>%
+  filter(DEVICE_GEO_REGION == "xor") %>%
+  mutate(zip_prefix = substr(DEVICE_GEO_ZIP, 1, 2)) %>%
+  count(zip_prefix, sort = TRUE)
+
+xor_zip_summary
+```
+
+The ZIP prefixes for `"xor"` rows are almost all `"97"` (Oregon), with a small number of missing ZIPs and a single sentinel-like value (`-9`). 
+To strengthen this conclusion, we also check whether the corresponding latitude/longitude values fall within Oregon’s approximate geographic bounds.
+
+```{r region-xor-geo}
+# Rough Oregon bounds
+oregon_lat_min  <- 42
+oregon_lat_max  <- 47
+oregon_long_min <- -125
+oregon_long_max <- -116
+
+xor_check <- bids %>%
+  filter(DEVICE_GEO_REGION == "xor") %>%
+  mutate(
+    zip_is_or = substr(DEVICE_GEO_ZIP, 1, 2) == "97",
+    geo_is_or = DEVICE_GEO_LAT >= oregon_lat_min & DEVICE_GEO_LAT <= oregon_lat_max &
+                DEVICE_GEO_LONG >= oregon_long_min & DEVICE_GEO_LONG <= oregon_long_max,
+    either_or = zip_is_or | geo_is_or
+  ) %>%
+  summarise(
+    n_total      = n(),
+    n_zip_or     = sum(zip_is_or, na.rm = TRUE),
+    n_geo_or     = sum(geo_is_or, na.rm = TRUE),
+    n_either_or  = sum(either_or, na.rm = TRUE),
+    n_neither    = sum(!either_or, na.rm = TRUE)
   )
 
-bids %>%
-  dplyr::count(region_clean, sort = TRUE)
-
+xor_check
 ```
+
+This result justifies that `"xor"` is also representative of Oregon.
 
 > 3.  Define a **standard representation** (`"OR"`) and create a cleaned version (e.g., `DEVICE_GEO_REGION_clean`) where:
 >     -   All Oregon variants are standardized to `"OR"`.
 >     -   Other values (if any) are treated according to a rule you decide (e.g., set to `NA` if they cannot be interpreted as Oregon).
+
+
+We will standardize Oregon as `"OR"`:
 
 ```{r}
 bids <- bids %>%
   mutate(
   # Standardize all Oregon variants to "OR"
     DEVICE_GEO_REGION_clean = dplyr::case_when(
-      region_clean %in% c("OR", "ORE", "OREG", "OREGON", "XOR") ~ "OR",
+      bids$DEVICE_GEO_REGION %in% c("OR", "Or", "oregon", "xor") ~ "OR",
       TRUE ~ NA_character_
     )
   )
@@ -427,14 +460,14 @@ bids <- bids %>%
 # Check the cleaned region values and their frequencies
 bids %>%
   dplyr::count(DEVICE_GEO_REGION_clean, sort = TRUE)
-
 ```
 
 > 4.  In **2–3 sentences**, explain:
 >     -   How you detected inconsistent codes,
 >     -   The **set-membership rule** you are enforcing (valid region codes for this dataset).
 
-We used dplyr count() to inspect all distinct DEVICE_GEO_REGION values and identify inconsistent Oregon codes. After trimming whitespace and converting all values to uppercase, we standardized all Oregon variants (“OR”, “ORE”, “OREG”, “OREGON”, and “XOR”) to the clean code “OR”, while treating any other unexpected patterns as invalid and setting them to NA.
+We used `dplyr::count()` to inspect all distinct `DEVICE_GEO_REGION` values and identify inconsistent Oregon codes. After justification, we standardize all Oregon variants (“OR”, “Or”, “oregon”, “xor”) to the clean code “OR”, while treating any other unexpected patterns as invalid and setting them to NA.
+
 
 ## DEVICE_GEO_ZIP: formats and sentinels
 
