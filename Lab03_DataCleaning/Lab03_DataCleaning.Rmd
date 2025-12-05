@@ -232,14 +232,27 @@ Helpful string tools:
 > 1.  Use `dplyr::count(DEVICE_GEO_REGION, sort = TRUE)` to list distinct region values and their frequencies.
 
 ```{r}
-# Your code here
+bids <- bids_raw
+# Count all unique region values and sort them by frequency
+bids %>%
+  dplyr::count(DEVICE_GEO_REGION, sort = TRUE)
+
 
 ```
 
 > 2.  Identify **all values** that clearly correspond to **Oregon**, just coded inconsistently (e.g., extra punctuation, different case, misspellings).
 
 ```{r}
-# Your code here
+# Inspect simplified versions of the region strings to identify Oregon variants
+bids <- bids %>%
+  dplyr::mutate(
+    region_trim  = stringr::str_trim(DEVICE_GEO_REGION),          # remove extra spaces
+    region_upper = stringr::str_to_upper(region_trim),            # convert to uppercase
+    region_clean = stringr::str_replace_all(region_upper, "[^A-Z]", "")  # keep letters only
+  )
+
+bids %>%
+  dplyr::count(region_clean, sort = TRUE)
 
 ```
 
@@ -248,13 +261,26 @@ Helpful string tools:
 >     -   Other values (if any) are treated according to a rule you decide (e.g., set to `NA` if they cannot be interpreted as Oregon).
 
 ```{r}
-# Your code here
+bids <- bids %>%
+  mutate(
+  # Standardize all Oregon variants to "OR"
+    DEVICE_GEO_REGION_clean = dplyr::case_when(
+      region_clean %in% c("OR", "ORE", "OREG", "OREGON", "XOR") ~ "OR",
+      TRUE ~ NA_character_
+    )
+  )
+
+# Check the cleaned region values and their frequencies
+bids %>%
+  dplyr::count(DEVICE_GEO_REGION_clean, sort = TRUE)
 
 ```
 
 > 4.  In **2–3 sentences**, explain:
 >     -   How you detected inconsistent codes,
 >     -   The **set-membership rule** you are enforcing (valid region codes for this dataset).
+
+We used dplyr count() to inspect all distinct DEVICE_GEO_REGION values and identify inconsistent Oregon codes. After trimming whitespace and converting all values to uppercase, we standardized all Oregon variants (“OR”, “ORE”, “OREG”, “OREGON”, and “XOR”) to the clean code “OR”, while treating any other unexpected patterns as invalid and setting them to NA.
 
 ## DEVICE_GEO_ZIP: formats and sentinels
 
@@ -265,7 +291,9 @@ Treat ZIP codes as **strings**, not numbers.
 > 1.  Convert ZIP codes to character and use `dplyr::count()` to inspect common values.
 
 ```{r}
-# Your code here
+# List the most common ZIP values (already stored as character)
+bids %>%
+  count(DEVICE_GEO_ZIP, sort = TRUE)
 
 ```
 
@@ -275,7 +303,52 @@ Treat ZIP codes as **strings**, not numbers.
 >     -   Non-digit characters.
 
 ```{r}
-# Your code here
+# Helper table for ZIP checks (used in Tasks 2–4)
+bids_zip_check <- bids %>%
+  mutate(
+    # 1) Normalize ZIP: trim spaces
+    zip_trim  = stringr::str_trim(zip_raw),
+
+    # 2) Length of the full ZIP string
+    zip_length = stringr::str_length(zip_trim),
+
+    # 3) Sentinel codes we want to treat as invalid
+    is_sentinel = zip_trim %in% c("-999"),
+
+    # 4) Does the ZIP start with a negative sign?
+    starts_negative = stringr::str_starts(zip_trim, "-"),
+
+    # 5) First 5 characters (candidate 5-digit ZIP)
+    zip5 = stringr::str_sub(zip_trim, 1, 5),
+
+    # 6) Check that the first 5 chars are exactly 5 digits
+    zip5_is_digits = stringr::str_detect(zip5, "^[0-9]{5}$"),
+
+    # 7) Convert those 5 digits to integer (for range checks)
+    zip5_int = dplyr::if_else(zip5_is_digits, as.integer(zip5), NA_integer_),
+
+    # 8) Oregon range check: 97001–97920
+    out_of_or_range = dplyr::if_else(
+      !is.na(zip5_int) & (zip5_int < 97001L | zip5_int > 97920L),
+      TRUE, FALSE
+    ),
+
+    # 9) Any non-digit characters anywhere in the trimmed ZIP?
+    has_nondigit = !stringr::str_detect(zip_trim, "^[0-9-]+$")
+  )
+
+# Task 2: show only *suspicious* ZIP patterns
+suspicious_zips <- bids_zip_check %>%
+  filter(
+    zip_length < 5 | zip_length > 10 |   # too short / too long
+      is_sentinel |                      # sentinel values
+      starts_negative |                  # negative ZIPs
+      has_nondigit |                     # non-digit characters
+      out_of_or_range                    # outside Oregon range
+  ) %>%
+  count(zip_trim, sort = TRUE)
+
+suspicious_zips
 
 ```
 
@@ -283,7 +356,20 @@ Treat ZIP codes as **strings**, not numbers.
 >     -   Consider using `stringr::str_length()`, `stringr::str_detect()` with a regular expression pattern, and `stringr::str_pad()` if necessary.
 
 ```{r}
-# Your code here
+
+# Use the helper table from Task 2
+bids_zip_check <- bids_zip_check %>%
+  mutate(
+    is_valid_oregon_zip =
+      !is.na(zip5_int) &       # valid 5-digit ZIP
+      !is_sentinel &           # not -999
+      !starts_negative &       # does not start with "-"
+      !has_nondigit &          # only digits
+      !out_of_or_range         # inside Oregon range
+  )
+
+bids_zip_check %>% count(is_valid_oregon_zip)
+
 
 ```
 
@@ -293,11 +379,25 @@ Treat ZIP codes as **strings**, not numbers.
 >     -   Enforces your chosen ZIP pattern.
 
 ```{r}
-# Your code here
+# Final cleaned ZIP using the helper table (no repeated cleaning)
+bids <- bids_zip_check %>%
+  mutate(
+    DEVICE_GEO_ZIP_clean = if_else(
+      is_valid_oregon_zip,
+      zip5,           # keep the first 5 digits
+      NA_character_   # otherwise NA
+    )
+  )
+
+# Look at the cleaned ZIP distribution to confirm the result
+bids %>%
+  dplyr::count(DEVICE_GEO_ZIP_clean, sort = TRUE)
 
 ```
 
-> 5.  In a short paragraph, describe your rule and why it is reasonable given the context (Oregon-only data).
+> 5. In a short paragraph, describe your rule and why it is reasonable given the context (Oregon-only data).
+
+Our rule defines a valid ZIP code as a clean 5-digit Oregon ZIP between 97001 and 97920. Because the data only contains Oregon bids, any value outside this range cannot be real. After reviewing the raw ZIPs, we flagged issues such as sentinel values (-999), negative signs, non-digit characters, and incorrect lengths. We treated “-999” as NA because it is a negative, impossible ZIP value that falls outside Oregon’s valid bounds and clearly acts as a sentinel placeholder. After extracting the first five digits, we kept only values that passed all checks and set the rest to NA.
 
 ## RESPONSE_TIME: prefixes and extra characters
 
@@ -312,29 +412,58 @@ The `RESPONSE_TIME` variable may include:
 > 1.  Use a small `sample()` of `RESPONSE_TIME` to inspect the raw patterns.
 
 ```{r}
-# Your code here
+# Take a small random sample of the raw RESPONSE_TIME values to inspect the patterns
+sample(bids$RESPONSE_TIME, size = 20)
+
 
 ```
 
-> 2.  Write a rule for how to:
->     -   Remove any “RESPONSE_TIME:” prefixes (including likely typos),
->     -   Strip extra non-numeric characters from the end,
->     -   Convert the remaining content to a numeric type.
-> 3.  Implement your rule in a cleaned variable (e.g., `RESPONSE_TIME_clean`) using `stringr::str_replace()` or related functions and `as.numeric()`.
+> 2. Write a rule for how to:
+>    - Remove any “RESPONSE_TIME:” prefixes (including likely typos),
+>    - Strip extra non-numeric characters from the end,
+>    - Convert the remaining content to a numeric type.
+
+To clean the RESPONSE_TIME field, my rule is to first remove any text prefix at the beginning of the value, including typos or variations of “RESPONSE_TIME”.  I then remove any additional non-numeric characters that might be present at the end of the string.I transform the cleaned value into a numeric type so that it can be used for analysis once only the digits are left.
+
+> 3. Implement your rule in a cleaned variable (e.g., `RESPONSE_TIME_clean`) using `stringr::str_replace()` or related functions and `as.numeric()`.
 
 ```{r}
-# Your code here
+# Clean RESPONSE_TIME
+bids <- bids %>%
+  mutate(
+    # 1) Remove ANY prefix (correct or typo) = remove all characters until first digit
+    rt_no_prefix = stringr::str_replace(RESPONSE_TIME, "^[^0-9]+", ""),
+
+    # 2) Remove any trailing non-numeric characters
+    rt_digits_only = stringr::str_replace(rt_no_prefix, "[^0-9]+$", ""),
+
+    # 3) Convert to numeric
+    RESPONSE_TIME_clean = as.numeric(rt_digits_only)
+  )
+
+# Check result
+bids %>% count(RESPONSE_TIME_clean, sort = TRUE)
+summary(bids$RESPONSE_TIME_clean)
+
 
 ```
 
 > 4.  Count how many `NA`s you get in `RESPONSE_TIME_clean` and briefly interpret what those `NA`s mean.
 
 ```{r}
-# Your code here
+# Count missing values in RESPONSE_TIME_clean
+bids %>%
+  dplyr::summarise(
+    num_NA = sum(is.na(RESPONSE_TIME_clean)),
+    total  = dplyr::n()
+  )
+
 
 ```
 
 > 5.  Connect this to the idea of **regular-expression patterns** as a tool for enforcing validity.
+
+By outlining precisely what a "correct" value should be, regular-expression patterns aid in enforcing validity.In this task, we eliminated invalid prefixes and trailing characters by using regex rules to extract only the numeric portion of each RESPONSE_TIME entry.By enforcing this pattern, we improve data quality and consistency by ensuring that only correctly formatted response times are retained and that any values that do not match the expected numeric structure become NA.
 
 # Date–Time Cleaning: TIMESTAMP (20–30 minutes)
 
@@ -838,13 +967,14 @@ Use the template below and fill it in with your team’s work. **One row (PRICE)
 |----------|-------------------------|---------------------------|--------------------------|
 | <FULL DATASET> | full-row duplicates | uniqueness | removed duplicates while maintaining single copy of each identical row |
 | PRICE | Includes non-numeric characters, negated values, non-digit characters (excludind '.'), negative sentinels | Validity, Completeness | Reverse negate applicable values, drop sentinels, convert to type numeric, drop extreme values |
-| DEVICE_GEO_REGION | *(team describes)* | *(team selects)* | *(team describes)* |
-| DEVICE_GEO_ZIP | *(team describes)* | *(team selects)* | *(team describes)* |
+| DEVICE_GEO_REGION | Inconsistent forms ("OREGON", "XOR", lowercase, extra spaces/punctuation) | Consistency / Validity     | Trim, uppercase, remove punctuation; map "OR", "OREGON", "XOR" → "OR"; others → NA |
+| DEVICE_GEO_ZIP    | Sentinel codes (-999, 9999, 00000), non-digit chars, wrong length       | Validity / Accuracy        | Remove sentinels; trim; convert to character; pad to 5 digits; keep valid Oregon ZIPs (97xxx) |
 | DEVICE_GEO_LAT | NONE: All values verified to be within plausible Oregon range | Validity, Accuracy | Copied into DEVICE_GEO_LAT_clean as-is |
 | DEVICE_GEO_LONG | 100 values outside Oregon plausible range | Validity, Accuracy | Shifted 100 values by 10 degrees (justifications above) |
-| RESPONSE_TIME | *(team describes)* | *(team selects)* | *(team describes)* |
+| RESPONSE_TIME     | Prefix "RESPONSE_TIME:" and trailing non-digit characters                | Validity                   | Remove prefix; strip non-digit endings; convert to numeric; invalid → NA        |
 | TIMESTAMP | *Not Time/Date Variable Format* | *Validity* | *Parse characters for POSIXtc formats* |
 | Other variable(s) | *(optional)* | *(optional)* | *(optional)* |
+
 
 ## Reflection (5–8 sentences)
 
@@ -865,9 +995,10 @@ Takeshi:
 - One thing you will do **differently** the next time you receive a new messy dataset.
 - Whether/how you used generative AI for this lab and how it affected your understanding.
 
-Chris:
+**Khloud:**
+Cleaning this dataset was more time-consuming than I expected, especially the string-based tasks such as standardizing region codes and validating ZIP formats. Many values were inconsistent, which made it surprising how easily fields can become messy in real-world data. Functions like mutate(), case_when(), str_trim(), str_detect(), and distinct() were especially valuable for organizing and transforming variables step by step. If I receive a similar dataset in the future, I would first create a clear plan for handling string patterns and sentinel values before writing any code. I also used generative AI to help me understand errors, write some of the cleaning code, and correct mistakes. This support made the workflow more efficient and improved my understanding of data-cleaning techniques.
 
-- 
+**Chris**:
 - parse_date_time() was a very cool and useful function to scrape out date-time data from the variable.
 - Next time the first step I take will be to convert the variables to whatever type or format the data should be in. Prior to looking for errors, having a variable in the right format should make it easier to identify any issues.
 - I did not use generative AI for this lab.
