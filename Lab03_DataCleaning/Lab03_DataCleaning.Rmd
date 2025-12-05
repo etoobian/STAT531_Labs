@@ -215,22 +215,34 @@ Create a **cleaned numeric version** (e.g., `PRICE_clean`) that:
 >
 >     To learn about their use, type `?` before either of them (e.g., `?readr::parse_number()`)
 
-```{r}
-bids <- select(.data=mutate(.data=bids, PRICE_clean=PRICE), -PRICE)
-idx <- which(substr(bids$PRICE_clean, 1, 1)=="O")
+```{r price_clean, warning=FALSE}
+# Copy PRICE into new column PRICE_clean
+bids <- bids %>% mutate(PRICE_clean = PRICE)
+
+# Fix known "O" typo
+idx <- which(substr(bids$PRICE_clean, 1, 1) == "O")
 bids$PRICE_clean[idx] <- sub("^O", "0", bids$PRICE_clean[idx])
-bids <- mutate(.data=bids_new, PRICE_clean=as.numeric(PRICE_clean))
-bids <- mutate(.data=bids_new, PRICE_clean=if_else(PRICE_clean==-999, NA, PRICE_clean))
+
+# Convert to numeric (will handle scientific notation)
+bids <-
+  mutate(.data = bids, PRICE_clean = supressWarnings(as.numeric(PRICE_clean)))
+
+# Convert sentinel (-999) to NA
+bids <-
+  mutate(.data = bids,
+         PRICE_clean = if_else(PRICE_clean == -999, NA, PRICE_clean))
+
+# Remove helper index
 rm(idx)
 ```
 
 > 2.  Count how many `NA`s you get in `PRICE_clean`. Explain why some values might be `NA` after parsing.
 
 ```{r}
-sum(is.na(bids_new$PRICE_clean))
+sum(is.na(bids$PRICE_clean))
 ```
 
-There exist NA values due to the existence of irretrievably set values of PRICE (sentinels).
+There exist NA values due to the existence of the 12 irretrievably set values of PRICE (sentinels).
 
 ## Define and apply rules for impossible values
 
