@@ -47,6 +47,7 @@ library(dplyr)
 library(knitr)
 library(kableExtra)
 library(stringr)
+library(lubridate)
 ```
 
 -   `tidyverse` (especially `dplyr`, `ggplot2`, `readr`, `stringr`)
@@ -68,9 +69,17 @@ Use the **same dataset** as in the earlier lab (e.g., a Parquet file in your `da
 
 You may want to keep the original as `bids_raw` and your working copy as `bids`.
 
-```{r Read Data}
+```{r Read Data, results='hold'}
+# Original Raw data
 bids_raw <- read_parquet("../data/bids_data_vDTR.parquet")
 
+# Working copy
+bids <- bids_raw
+
+# Briefly inspect data
+glimpse(bids)
+
+summary(bids)
 ```
 
 # Quick Orientation Check (10–15 minutes)
@@ -78,18 +87,23 @@ bids_raw <- read_parquet("../data/bids_data_vDTR.parquet")
 Using your prior lab work and Data Cleaning lectures:
 
 1.  In **2–4 sentences**, describe **what each row** in this dataset represents.
-Taken from the Second Lab, section 1-2:
+
+*Taken from the Second Lab, section 1-2:*
+
   - The Prebid server handles online ad auctions where multiple bidders submit CPM bids.
   - Each auction can have multiple bidders and each bidder may bid on multiple sizes.
   - Each row corresponds to **one bidder's response for one size within an auction**.
-2.  Identify **one or two variables** that you think should be:
-    -   **Mandatory**: PRICE; this is due to the fact that we are looking to perform analysis on PRICE itself, and if a PRICE value is missing, we cannot perform an analysis.
-    -   **Unique Key**: There exists no Unique Key or any small consistent combination of keys that can indicate uniqueness between each row that exists within this dataset.
-3.  Pick **two variables** and, for each, assign at least one **data quality dimension** (e.g., completeness, validity, consistency, uniqueness, cross-field consistency).
-    -   PRICE needs to be complete and valid, otherwise these rows should be dropped as they don't contribute to any form of analysis given that there is no underlying pattern as to why they are incomplete/invalid.
-    -   AUCTION_ID must be unique within their own groupings to ensure that all other columns stay relevant and usable (though individually not unique from each other).
 
-> **Write your answers directly in this Rmd in a text section (not code).**
+2.  Identify **one or two variables** that you think should be:
+
+  -   **Mandatory**: `PRICE`; this is due to the fact that we are looking to perform analysis on `PRICE` itself, and if a `PRICE` value is missing, we cannot perform an analysis.
+  -   **Unique Key**: There exists no single variable that is a Unique Key in this dataset, or any small, combination of keys that can work as a composite key (shown in a section below).
+  
+3.  Pick **two variables** and, for each, assign at least one **data quality dimension** (e.g., completeness, validity, consistency, uniqueness, cross-field consistency).
+
+  -   `PRICE` needs to be **complete** and **valid**, otherwise these rows should be dropped as they don't contribute to the analysis and there is no clear pattern explaining why they are missing or invalid.
+  -   `AUCTION_ID` must be **consistent** and **accurate** in order to be used as an identifier when it appears, in order for other columns (like `SIZE` and `PRICE`) to be interpretable within each auction. Although `AUCTION_ID` is not unique per row, it is an important grouping variable and must be recorded accurately.
+
 
 # Fixing Numeric & Price Issues (30–40 minutes)
 
@@ -985,20 +999,20 @@ Write a short reflection addressing:
 -   One thing you will do **differently** the next time you receive a new messy dataset.
 -   Whether/how you used generative AI for this lab and how it affected your understanding.
 
-Takeshi:
-- The most time-consuming task was realizing that there was an O instead of a zero.
-- filter() and mutate() were the top two functions utilized in cleaning the data, but there is an honorable mention to substr() and sub() that allowed me to correct the O to a zero.
+**Takeshi:**
+
+- The most time-consuming task was realizing that there was an 'O' instead of a zero.
+- `filter()` and `mutate()` were the top two functions utilized in cleaning the data, but there is an honorable mention to `substr()` and `sub()` that allowed me to correct the 'O' to a zero.
 - Under the assumption that there is no data dictionary like what has been given for this project, I will like to assume that there is no one set way of doing data cleaning, and therefore for me to say there is an exact way to clean data would be quite rambunctious of me. 
 - I did not use generative AI for this task, since most of the lab was completed independently before hand. For anything new that I had to implement for this lab specifically, I did not need generative AI.
-- Which data cleaning tasks were the most **time-consuming** or **surprising**?
-- Which functions or workflows (e.g., `mutate()`, `case_when()`, `str_*()`, `parse_date_time()`, `distinct()`) were most valuable?
-- One thing you will do **differently** the next time you receive a new messy dataset.
-- Whether/how you used generative AI for this lab and how it affected your understanding.
 
 **Khloud:**
-Cleaning this dataset was more time-consuming than I expected, especially the string-based tasks such as standardizing region codes and validating ZIP formats. Many values were inconsistent, which made it surprising how easily fields can become messy in real-world data. Functions like mutate(), case_when(), str_trim(), str_detect(), and distinct() were especially valuable for organizing and transforming variables step by step. If I receive a similar dataset in the future, I would first create a clear plan for handling string patterns and sentinel values before writing any code. I also used generative AI to help me understand errors, write some of the cleaning code, and correct mistakes. This support made the workflow more efficient and improved my understanding of data-cleaning techniques.
+Cleaning this dataset was more time-consuming than I expected, especially the string-based tasks such as standardizing region codes and validating ZIP formats. Many values were inconsistent, which made it surprising how easily fields can become messy in real-world data. Functions like `mutate()`, `case_when()`, `str_trim()`, `str_detect()`, and `distinct()` were especially valuable for organizing and transforming variables step by step. If I receive a similar dataset in the future, I would first create a clear plan for handling string patterns and sentinel values before writing any code. I also used generative AI to help me understand errors, write some of the cleaning code, and correct mistakes. This support made the workflow more efficient and improved my understanding of data-cleaning techniques.
 
-**Chris**:
-- parse_date_time() was a very cool and useful function to scrape out date-time data from the variable.
+**Chris:**
+
+- `parse_date_time()` was a very cool and useful function to scrape out date-time data from the variable.
 - Next time the first step I take will be to convert the variables to whatever type or format the data should be in. Prior to looking for errors, having a variable in the right format should make it easier to identify any issues.
 - I did not use generative AI for this lab.
+
+**Esther:**
