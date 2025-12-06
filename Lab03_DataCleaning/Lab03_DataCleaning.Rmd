@@ -618,59 +618,63 @@ The `RESPONSE_TIME` variable may include:
 >
 > 1.  Use a small `sample()` of `RESPONSE_TIME` to inspect the raw patterns.
 
-```{r}
+```{r response-time-sample}
 # Take a small random sample of the raw RESPONSE_TIME values to inspect the patterns
 sample(bids$RESPONSE_TIME, size = 20)
-
-
 ```
+We see that all `RESPONSE_TIME` values from this sample begin with "RESPONSE_TIME: ". We verify if this is true for entire variable:
+```{r response-time-prefix-check}
+# Check if first 15 characters match same pattern for all values
+bids %>%
+  transmute(prefix15 = str_sub(RESPONSE_TIME, 1, 15)) %>%
+  count(prefix15)
+```
+
+We see almost all (443,968) values are prefixed with **"RESPONSE_TIME: "** and one with **"RESSPONSE_TIME: "**.
 
 > 2. Write a rule for how to:
 >    - Remove any “RESPONSE_TIME:” prefixes (including likely typos),
 >    - Strip extra non-numeric characters from the end,
 >    - Convert the remaining content to a numeric type.
 
-To clean the RESPONSE_TIME field, my rule is to first remove any text prefix at the beginning of the value, including typos or variations of “RESPONSE_TIME”.  I then remove any additional non-numeric characters that might be present at the end of the string.I transform the cleaned value into a numeric type so that it can be used for analysis once only the digits are left.
+To clean the `RESPONSE_TIME` field, we first remove any text prefix at the beginning of the value, including typos or variations of “RESPONSE_TIME”, then remove any additional non-numeric characters that might be present at the end of the string. We transform the cleaned value into a numeric type so that it can be used for analysis once only the digits are left.
 
 > 3. Implement your rule in a cleaned variable (e.g., `RESPONSE_TIME_clean`) using `stringr::str_replace()` or related functions and `as.numeric()`.
 
-```{r}
+```{r response-time-clean}
 # Clean RESPONSE_TIME
 bids <- bids %>%
   mutate(
-    # 1) Remove ANY prefix (correct or typo) = remove all characters until first digit
-    rt_no_prefix = stringr::str_replace(RESPONSE_TIME, "^[^0-9]+", ""),
-
-    # 2) Remove any trailing non-numeric characters
-    rt_digits_only = stringr::str_replace(rt_no_prefix, "[^0-9]+$", ""),
-
-    # 3) Convert to numeric
-    RESPONSE_TIME_clean = as.numeric(rt_digits_only)
+    RESPONSE_TIME_clean = RESPONSE_TIME %>%
+      # Remove ANY prefix (correct or typo) = remove all characters until first digit
+      str_replace("^[^0-9]+", "") %>%
+      
+      # Remove any trailing non-numeric characters
+      str_replace("[^0-9]+$", "") %>%
+      
+      # Convert to numeric
+      as.numeric()
   )
 
 # Check result
-bids %>% count(RESPONSE_TIME_clean, sort = TRUE)
+glimpse(bids %>% select(RESPONSE_TIME_clean))
 summary(bids$RESPONSE_TIME_clean)
-
-
 ```
 
 > 4.  Count how many `NA`s you get in `RESPONSE_TIME_clean` and briefly interpret what those `NA`s mean.
 
-```{r}
+```{r response-time-na}
 # Count missing values in RESPONSE_TIME_clean
 bids %>%
-  dplyr::summarise(
-    num_NA = sum(is.na(RESPONSE_TIME_clean)),
-    total  = dplyr::n()
-  )
-
-
+  summarise(num_NA = sum(is.na(RESPONSE_TIME_clean)),
+            total  = n())
 ```
+There are no NA values in `RESPONSE_TIME_clean`. Every `RESPONSE_TIME` entry followed the expected prefix-plus-digits pattern, so all values could be parsed successfully.
 
 > 5.  Connect this to the idea of **regular-expression patterns** as a tool for enforcing validity.
 
-By outlining precisely what a "correct" value should be, regular-expression patterns aid in enforcing validity.In this task, we eliminated invalid prefixes and trailing characters by using regex rules to extract only the numeric portion of each RESPONSE_TIME entry.By enforcing this pattern, we improve data quality and consistency by ensuring that only correctly formatted response times are retained and that any values that do not match the expected numeric structure become NA.
+By outlining precisely what a "correct" value should be, regular-expression patterns aid in enforcing validity.In this task, we eliminated text prefixes before the first digit and any trailing non-numeric characters by using regex rules to extract only the numeric portion of each `RESPONSE_TIME` entry.By enforcing this pattern, we improve data quality and consistency by ensuring that only correctly formatted response times are retained and that any values that do not match the expected numeric structure become NA.
+
 
 # Date–Time Cleaning: TIMESTAMP (20–30 minutes)
 
@@ -1176,9 +1180,11 @@ Use the template below and fill it in with your team’s work. **One row (PRICE)
 | **PRICE** | Non-numeric encodings ('O' instead of '0'), sentinel code -999, negative prices, rare extreme small/large values | Validity, Completeness | Fix typo ('O'to'0'); convert to numeric; map sentinel -999 to NA; negate remaining negative prices to positive values; retain extreme small/large positive prices as potential outliers |
 | **DEVICE_GEO_REGION** | Inconsistent forms ("OREGON", "XOR", lowercase) | Consistency / Validity     | Map "OR", "or", "oregon", "xor" to "OR"; Sentinels to NA |
 | **DEVICE_GEO_ZIP**  | Sentinel codes (-999), non-digit chars, wrong length  | Validity / Accuracy        | Ssentinels to 'NA'; Trim to 5 digits; Keep valid Oregon ZIPs (97xxx) |
+| **RESPONSE_TIME** | Prefix and possible trailing non-digit characters; not numeric     | Validity       | Remove prefix; strip non-digit endings; convert to numeric; no invalid to convert to NA  |
+
 | DEVICE_GEO_LAT | NONE: All values verified to be within plausible Oregon range | Validity, Accuracy | Copied into DEVICE_GEO_LAT_clean as-is |
 | DEVICE_GEO_LONG | 100 values outside Oregon plausible range | Validity, Accuracy | Shifted 100 values by 10 degrees (justifications above) |
-| RESPONSE_TIME     | Prefix "RESPONSE_TIME:" and trailing non-digit characters                | Validity                   | Remove prefix; strip non-digit endings; convert to numeric; invalid → NA        |
+
 | TIMESTAMP | *Not Time/Date Variable Format* | *Validity* | *Parse characters for POSIXtc formats* |
 | Other variable(s) | *(optional)* | *(optional)* | *(optional)* |
 
@@ -1209,3 +1215,8 @@ Cleaning this dataset was more time-consuming than I expected, especially the st
 - I did not use generative AI for this lab.
 
 **Esther:**
+
+  - The most time-consuming data cleaning task by far was converting everyone's work into one cohesive flow which did not override others' previous work and ensuring a logical flow with justifications of actions & decisions.
+  - These all proved to be useful at various points in the cleanup.
+  - I would definitely find a way to have the team work sequentially with shorter deadlines for each section. This process of splitting the work and one person compiling into a single documents proved much more work than expected and more work than a single person doing the entire lab by themselves. As far as a general messy dataset, a strong initial plan of action along with sequential, organized workflow with full justifications of each decision is imperative.
+  - I attempted to use generative AI to help streamline the consolidation process and check for any code chunks which override the work of previous teammates' code chunks. However, I immediately saw issues and could not trust this would not introduce more errors. It proved to be more work than just working through the document myself, as I would still to perform these checks myself anyway to ensure the AI had not misled me.
