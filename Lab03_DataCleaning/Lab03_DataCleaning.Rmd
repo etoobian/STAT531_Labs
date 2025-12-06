@@ -857,7 +857,7 @@ candidate_key_counts %>%
 
 - Although we have removed full duplicate rows, this particular set of variables still does not work as a composite key for unique row identification.
 
-We can create a helper function to allow us to search available variables for a combination which will work as a key. To avoid computational blowout, we focus only on variables which logically make the most sense and limit our number of variables per composite key to 4:
+We can create a helper function to allow us to search available variables for a combination which will work as a key. To avoid computational blow-up, we focus only on variables which logically make the most sense and limit our number of variables per composite key to 4:
 
 ```{r composite-key-helper}
 check_candidate_keys <- function(data, cols, max_size = 4, show_full = TRUE) {
@@ -911,16 +911,16 @@ We then use this function to check the most likely candidate variables:
 composite_candidates <- c(
   "AUCTION_ID",
   "SIZE",
-  "PRICE",
-  "RESPONSE_TIME",
+  "PRICE_final",
+  "RESPONSE_TIME_clean",
   "BID_WON",
   "PUBLISHER_ID",
   "DEVICE_TYPE",
   "DEVICE_GEO_CITY",
-  "DEVICE_GEO_ZIP",
+  "DEVICE_GEO_ZIP_clean",
   "DEVICE_GEO_LAT",
   "DEVICE_GEO_LONG",
-  "TIMESTAMP"
+  "TIMESTAMP_clean"
 )
 
 key_results <- check_candidate_keys(
@@ -970,11 +970,14 @@ latlong_summary <- bids_nodup %>%
     n_rows          = n(),
     min_lat         = min(DEVICE_GEO_LAT, na.rm = TRUE),
     max_lat         = max(DEVICE_GEO_LAT, na.rm = TRUE),
-    n_lat_outside   = sum(DEVICE_GEO_LAT < 41    | DEVICE_GEO_LAT > 47,     na.rm = TRUE),
+    n_lat_outside   = sum(DEVICE_GEO_LAT < 41    |
+                            DEVICE_GEO_LAT > 47,     na.rm = TRUE),
     min_long        = min(DEVICE_GEO_LONG, na.rm = TRUE),
     max_long        = max(DEVICE_GEO_LONG, na.rm = TRUE),
-    n_long_outside  = sum(DEVICE_GEO_LONG < -125 | DEVICE_GEO_LONG > -116, na.rm = TRUE),
-    n_long_10_over  = sum(DEVICE_GEO_LONG < -121 & DEVICE_GEO_LONG > -127.5, na.rm = TRUE)
+    n_long_outside  = sum(DEVICE_GEO_LONG < -125 |
+                            DEVICE_GEO_LONG > -116, na.rm = TRUE),
+    n_long_10_over  = sum(DEVICE_GEO_LONG < -121 &
+                            DEVICE_GEO_LONG > -127.5, na.rm = TRUE)
   )
 
 latlong_summary %>%
@@ -999,8 +1002,8 @@ good_long <- bids_nodup %>%
 
 # Verify count of "bad longitude" rows is 100
 nrow(bad_long)
-
 ```
+
 ```{r check-shift}
 # Verify shift will put "bad longitude" rows in bounds
 bad_long_shift_check <- bad_long %>%
@@ -1011,7 +1014,8 @@ bad_long_shift_check <- bad_long %>%
     max_long_orig         = max(DEVICE_GEO_LONG, na.rm = TRUE),
     min_long_shifted      = min(long_shifted, na.rm = TRUE),
     max_long_shifted      = max(long_shifted, na.rm = TRUE),
-    n_shifted_in_bounds   = sum(long_shifted >= -125 & long_shifted <= -116, na.rm = TRUE)
+    n_shifted_in_bounds   = sum(long_shifted >= -125 &
+                                  long_shifted <= -116, na.rm = TRUE)
   )
 
 bad_long_shift_check
@@ -1024,19 +1028,20 @@ To verify via **Zip** and **City**, we first check to see how many of the 100 ha
 bad_long %>%
   summarise(
     n_bad         = n(),
-    n_zip_city_ok = sum(!is.na(DEVICE_GEO_ZIP) & !is.na(DEVICE_GEO_CITY)),
-    n_zip_na      = sum(is.na(DEVICE_GEO_ZIP)),
+    n_zip_city_ok = sum(!is.na(DEVICE_GEO_ZIP_clean) &
+                          !is.na(DEVICE_GEO_CITY)),
+    n_zip_na      = sum(is.na(DEVICE_GEO_ZIP_clean)),
     n_city_na     = sum(is.na(DEVICE_GEO_CITY))
   )
 ```
 
-We see that **98 of the 100** rows have `DEVICE_GEO_CITY` and `DEVICE_GEO_ZIP` data available. We first address those rows.
+We see that **98 of the 100** rows have `DEVICE_GEO_CITY` and `DEVICE_GEO_ZIP_clean` data available. We first address those rows.
 
 ```{r zip-city-shift-check}
 # Collapse "good" longitudes to one reference value per ZIP + CITY
 good_zipcity <- good_long %>%
-  filter(!is.na(DEVICE_GEO_ZIP), !is.na(DEVICE_GEO_CITY)) %>%
-  group_by(DEVICE_GEO_ZIP, DEVICE_GEO_CITY) %>%
+  filter(!is.na(DEVICE_GEO_ZIP_clean), !is.na(DEVICE_GEO_CITY)) %>%
+  group_by(DEVICE_GEO_ZIP_clean, DEVICE_GEO_CITY) %>%
   summarise(
     ref_long = mean(DEVICE_GEO_LONG, na.rm = TRUE),
     .groups  = "drop"
@@ -1044,14 +1049,14 @@ good_zipcity <- good_long %>%
 
 # Join bad rows (w/ valid ZIP + CITY) to these reference values
 paired_zipcity <- bad_long %>%
-  filter(!is.na(DEVICE_GEO_ZIP), !is.na(DEVICE_GEO_CITY)) %>%
+  filter(!is.na(DEVICE_GEO_ZIP_clean), !is.na(DEVICE_GEO_CITY)) %>%
   left_join(
     good_zipcity,
-    by = c("DEVICE_GEO_ZIP", "DEVICE_GEO_CITY")
+    by = c("DEVICE_GEO_ZIP_clean", "DEVICE_GEO_CITY")
   ) %>%
   mutate(diff_long = ref_long - DEVICE_GEO_LONG)
 
-# Summarise differences
+# Summarize differences
 paired_zipcity %>%
   summarise(
     n_bad_with_match = sum(!is.na(ref_long)),
@@ -1064,12 +1069,12 @@ paired_zipcity %>%
 
 These results **justify the 10 degree shift** for these 98 values.
 
-We now address the 2 values which `NA` for `DEVICE_GEO_CITY` and `DEVICE_GEO_ZIP`. We compare these to other rows with the same `AUCTION_ID`:
+We now address the 2 values which `NA` for `DEVICE_GEO_CITY` and `DEVICE_GEO_ZIP_clean`. We compare these to other rows with the same `AUCTION_ID`:
 
 ```{r auction-shift-check-clean, message=FALSE}
 # Identify bad rows with missing ZIP/CITY
 bad_missing_loc <- bad_long %>%
-  filter(is.na(DEVICE_GEO_ZIP) | is.na(DEVICE_GEO_CITY))
+  filter(is.na(DEVICE_GEO_ZIP_clean) | is.na(DEVICE_GEO_CITY))
 
 # Reference longitudes for each auction (from good rows)
 good_auction <- good_long %>%
@@ -1081,13 +1086,11 @@ good_auction <- good_long %>%
 auction_shift_check <- bad_missing_loc %>%
   left_join(good_auction, by = "AUCTION_ID") %>%
   mutate(diff_long = ref_long_auction - DEVICE_GEO_LONG) %>%
-  select(
-    AUCTION_ID,
-    DEVICE_GEO_LAT,
-    DEVICE_GEO_LONG,
-    ref_long_auction,
-    diff_long
-  )
+  select(AUCTION_ID,
+         DEVICE_GEO_LAT,
+         DEVICE_GEO_LONG,
+         ref_long_auction,
+         diff_long)
 
 auction_shift_check %>%
   kable(caption = "Two NA-location rows with auction-based longitude comparison") %>%
@@ -1105,7 +1108,7 @@ These results show these two rows are **shifted exactly 10 degrees** from the ot
 - All `DEVICE_GEO_LAT` values are within plausible Oregon range.
     - Transfer as-is to `DEVICE_GEO_LAT_clean`.
 - There are **100 rows** with `DEVICE_GEO_LONG` outside of a plausible Oregon range.
-    - 98 of these 100 have rows with matching `DEVICE_GEO_CITY` and `DEVICE_GEO_ZIP` which show an exact 10 degree shift in longitude.
+    - 98 of these 100 have rows with matching `DEVICE_GEO_CITY` and `DEVICE_GEO_ZIP_clean` which show an exact 10 degree shift in longitude.
     - Remaining 2 rows show all matching `AUCTION_ID`s have exact 10 degree shift in longitudinal values.
     - These justify a **10 degree shift for all 100 out-of-bounds longitudinal values** for `DEVICE_GEO_LONG_clean`.
 
@@ -1127,7 +1130,8 @@ bids_nodup %>%
   summarise(
     n_rows = n(),
     n_long_outside_clean =
-      sum(DEVICE_GEO_LONG_clean < -125 | DEVICE_GEO_LONG_clean > -116)
+      sum(DEVICE_GEO_LONG_clean < -125 | DEVICE_GEO_LONG_clean > -116,
+          na.rm = TRUE)
   )
 ```
 
@@ -1177,14 +1181,14 @@ Use the template below and fill it in with your team’s work. **One row (PRICE)
 
 | Variable | Problem Detected (brief) | Data Quality Dimension(s) | Cleaning Action (brief) |
 |----------|-------------------------|---------------------------|--------------------------|
-| **FULL DATASET** | full-row duplicates | Uniqueness | removed duplicates while maintaining single copy of each identical row |
+| **FULL DATASET** | Exact full-row duplicates | Uniqueness | Removed exact duplicates rows while keeping a single copy of each identical record |
 | **PRICE** | Non-numeric encodings ('O' instead of '0'), sentinel code -999, negative prices, rare extreme small/large values | Validity, Completeness | Fix typo ('O' to'0'); convert to numeric; map sentinel -999 to NA; negate remaining negative prices to positive values; retain extreme small/large positive prices as potential outliers |
 | **DEVICE_GEO_REGION** | Inconsistent forms ("OREGON", "XOR", lowercase) | Consistency / Validity     | Map "OR", "or", "oregon", "xor" to "OR"; Sentinels to NA |
 | **DEVICE_GEO_ZIP**  | Sentinel codes (-999), non-digit chars, wrong length  | Validity / Accuracy        | Sentinels to 'NA'; Trim to 5 digits; Keep valid Oregon ZIP's (97xxx) |
 | **RESPONSE_TIME** | Prefix and possible trailing non-digit characters; not numeric     | Validity       | Remove prefix; strip non-digit endings; convert to numeric; no invalid to convert to NA  |
 | **TIMESTAMP** | Inconsistent Time/Date Variable Format; Some missing dates | Validity | Parse using `parse_dat_time()` with multiple formats; Invalid rows (NA dates) set to "NA" |
-| DEVICE_GEO_LAT | NONE: All values verified to be within plausible Oregon range | Validity, Accuracy | Copied into DEVICE_GEO_LAT_clean as-is |
-| DEVICE_GEO_LONG | 100 values outside Oregon plausible range | Validity, Accuracy | Shifted 100 values by 10 degrees (justifications above) |
+| **DEVICE_GEO_LAT** | NONE: All values verified to be within plausible Oregon range | Validity, Accuracy | Copied into DEVICE_GEO_LAT_clean as-is |
+| **DEVICE_GEO_LONG** | 100 values outside Oregon plausible range | Validity, Accuracy | Shifted 100 values by 10 degrees (justifications above) |
 
 ## Reflection (5–8 sentences)
 
