@@ -1215,7 +1215,7 @@ glimpse(bids_clean)
 
 ```{r save-clean-data, eval=FALSE}
 # Save to data folder ignored by git
-write_parquet(bids_clea, "../data/lab_cleaned_bids_data.parquet")
+write_parquet(bids_clean, "../data/lab_cleaned_bids_data.parquet")
 ```
 
 > 4.  In a short paragraph, describe what your final cleaned dataset now represents and what major issues have been addressed.
