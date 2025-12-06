@@ -692,26 +692,28 @@ Useful tools:
 >
 > 1.  Look at a small random sample of `TIMESTAMP` values.
 
-```{r}
-
-sample(bids$TIMESTAMP)
-
+```{r timestamp-sample}
+sample(bids$TIMESTAMP, size = 20)
 ```
 
 > 2.  Use `stringr::str_detect()` to count how many timestamps use `"-"` versus `"/"` in the date.
 
-```{r}
+```{r timestamp-count-format}
+(dash_rows  <- str_detect(bids$TIMESTAMP, "-") %>%  sum())
+(slash_rows <- str_detect(bids$TIMESTAMP, "/") %>%  sum())
+(na_rows    <- str_detect(bids$TIMESTAMP, "NA") %>%  sum())
 
-stringr::str_detect(bids$TIMESTAMP, "-") %>%
-  sum()
-stringr::str_detect(bids$TIMESTAMP, "/") %>%
-  sum()
-
+# Ensure this accounts for all rows
+dash_rows + slash_rows + na_rows
+nrow(bids)
 ```
 
 > 3.  Summarize in 1–2 sentences what you observe.
 
-There are two obvious issues so far: NA values in the date portion of the variable, and some entries are listed with "/" rather than "-". There are 1157 entries where "/" is used.
+There are two obvious issues so far: 
+
+  - `NA` values in the date portion of the variable
+  - Some entries are listed with `"/"` (1157) rather than `"-"` (421,614)
 
 ## Parse TIMESTAMP into a POSIXct variable
 
@@ -721,39 +723,38 @@ There are two obvious issues so far: NA values in the date portion of the variab
 >     -   Allow for multiple possible formats (e.g., one order for `ymd HMS` and one for `mdy HMS` to see examples scroll paste `?lubridate::parse_date_time()` in your console and scroll all the way to the bottom of the function's help tab),
 >     -   Specify a time zone (e.g., `"UTC"`).
 
-```{r TIMESTAMP Parse}
-
-TIMESTAMP_clean <- lubridate::parse_date_time(bids$TIMESTAMP, c("ymd HMS", "mdy HMS"), tz = "UTC")
-
+```{r timestamp-parse}
+bids <- bids %>% 
+  mutate(
+    TIMESTAMP_clean = lubridate::parse_date_time(
+      TIMESTAMP,
+      orders = c("ymd HMS", "mdy HMS"),
+      tz = "UTC")
+  )
 ```
 
 > 2.  Count how many `NA`s result from parsing.
 
-```{r TIMESTAMP NAs}
-
-sum(is.na(TIMESTAMP_clean))
-
+```{r timestamp-nas}
+sum(is.na(bids$TIMESTAMP_clean))
 ```
 
 > 3.  Use `summary()` or `range()` to examine the minimum and maximum of `TIMESTAMP_clean`.
 
-```{r TIMESTAMP summary}
-
-summary(TIMESTAMP_clean)
-
+```{r timestamp-summary}
+summary(bids$TIMESTAMP_clean)
 ```
 
 > 4.  Briefly comment on:
 >     -   Whether the time range seems reasonable,
 >     -   What kinds of entries failed to parse (if any).
 
-The shown range for the TIMESTAMP variable seems reasonable, given that we only have about a day's worth of data. There were entries that had a given time, but the date was labeled as NA. These seem to be the entries that did not parse into the POSIXct variable. Though the date is NA, we know the range is within a day. There may be possibility to recover those date values by referencing the given time and assigning the date associated with it.
+The shown range for the TIMESTAMP variable seems reasonable, given that we only have about a day's worth of data. There were entries that had a given time, but the date was labeled as `NA`. These seem to be the entries that did not parse into the `POSIXct` variable. Though the date is `NA`, we know the range is within a day. There may be possibility to recover those date values by referencing the given time and assigning the date associated with it.
+
 
 # Keys, Duplicates, and Out-of-Range Values (20–30 minutes)
 
 ## Candidate keys and duplicates
-
-Using your earlier reasoning:
 
 > **Tasks:**
 >
@@ -771,18 +772,18 @@ Using your earlier reasoning:
 # Candidate composite key: AUCTION_ID + SIZE + PRICE
 
 # Compare rows vs. distinct by composite key
-bids_raw %>%
-  dplyr::summarise(
-    n_rows          = dplyr::n(),
-    n_unique_auct   = dplyr::n_distinct(AUCTION_ID)#, SIZE, PRICE)
+bids %>%
+  summarise(
+    n_rows          = n(),
+    n_unique_auct   = n_distinct(AUCTION_ID, SIZE, PRICE)
   )
 
 # Show composite key rows that appear more than once
-candidate_key_counts <- bids_raw %>%
-  dplyr::count(AUCTION_ID, SIZE, PRICE, sort = TRUE)
+candidate_key_counts <- bids %>%
+  count(AUCTION_ID, SIZE, PRICE, sort = TRUE)
 
 candidate_key_counts %>%
-  dplyr::filter(n > 1) %>%
+  filter(n > 1) %>%
   head(20)
 ```
 
@@ -794,17 +795,17 @@ candidate_key_counts %>%
 
 ```{r full-row-duplicate-check}
 # Total number of rows in dataset
-n_rows <- nrow(bids_raw)
+n_rows <- nrow(bids)
 
 # Number of distinct rows across all columns
-n_rows_distinct <- bids_raw %>%
-  dplyr::distinct() %>%
+n_rows_distinct <- bids %>%
+  distinct() %>%
   nrow()
 
 # Number of exact duplicate rows
 n_exact_duplicates <- n_rows - n_rows_distinct
 
-cat("Total rows:                      ", n_rows, "\n")
+cat("Total rows:                       ", n_rows, "\n")
 cat("Distinct rows (all columns):      ", n_rows_distinct, "\n")
 cat("Exact duplicate rows (by count):  ", n_exact_duplicates, "\n")
 ```
@@ -817,21 +818,21 @@ cat("Exact duplicate rows (by count):  ", n_exact_duplicates, "\n")
 >    - Keep first occurrence and drop the rest?
 >    - Something else?
 
-- We will drop full duplicate rows, keeping a single row in each set of duplicates.
+**We will drop full duplicate rows, keeping a single row in each set of duplicates.**
 
 
 > 5. Implement your rule and create a de-duplicated dataset (e.g., `bids_nodup`).
 
 ```{r create-bids-nodup}
 # Remove exact full-row duplicates (keep one copy)
-bids_nodup <- bids_raw %>%
+bids_nodup <- bids %>%
   distinct()
 
-cat("Rows in original dataset:   ", nrow(bids_raw), "\n")
+cat("Rows in original dataset:   ", nrow(bids), "\n")
 cat("Rows in bids_nodup dataset: ", nrow(bids_nodup), "\n")
 ```
 
-- We now have a count of **441,535 rows**, which matches the number of distinct rows in the raw data.
+- We now have a count of **441,535 rows**, which matches the number of distinct rows we computed above.
 
 We can now re-check our initial candidate for a composite key:
 
@@ -840,17 +841,17 @@ We can now re-check our initial candidate for a composite key:
 
 # Compare rows vs. distinct by composite key
 bids_nodup %>%
-  dplyr::summarise(
-    n_rows         = dplyr::n(),
-    n_unique_key   = dplyr::n_distinct(AUCTION_ID, SIZE, PRICE)
+  summarise(
+    n_rows         = n(),
+    n_unique_key   = n_distinct(AUCTION_ID, SIZE, PRICE)
   )
 
 # Show composite key rows that appear more than once
 candidate_key_counts <- bids_nodup %>%
-  dplyr::count(AUCTION_ID, SIZE, PRICE, sort = TRUE)
+  count(AUCTION_ID, SIZE, PRICE, sort = TRUE)
 
 candidate_key_counts %>%
-  dplyr::filter(n > 1) %>%
+  filter(n > 1) %>%
   head(20)
 ```
 
@@ -1176,18 +1177,14 @@ Use the template below and fill it in with your team’s work. **One row (PRICE)
 
 | Variable | Problem Detected (brief) | Data Quality Dimension(s) | Cleaning Action (brief) |
 |----------|-------------------------|---------------------------|--------------------------|
-| <FULL DATASET> | full-row duplicates | uniqueness | removed duplicates while maintaining single copy of each identical row |
-| **PRICE** | Non-numeric encodings ('O' instead of '0'), sentinel code -999, negative prices, rare extreme small/large values | Validity, Completeness | Fix typo ('O'to'0'); convert to numeric; map sentinel -999 to NA; negate remaining negative prices to positive values; retain extreme small/large positive prices as potential outliers |
+| **FULL DATASET** | full-row duplicates | Uniqueness | removed duplicates while maintaining single copy of each identical row |
+| **PRICE** | Non-numeric encodings ('O' instead of '0'), sentinel code -999, negative prices, rare extreme small/large values | Validity, Completeness | Fix typo ('O' to'0'); convert to numeric; map sentinel -999 to NA; negate remaining negative prices to positive values; retain extreme small/large positive prices as potential outliers |
 | **DEVICE_GEO_REGION** | Inconsistent forms ("OREGON", "XOR", lowercase) | Consistency / Validity     | Map "OR", "or", "oregon", "xor" to "OR"; Sentinels to NA |
-| **DEVICE_GEO_ZIP**  | Sentinel codes (-999), non-digit chars, wrong length  | Validity / Accuracy        | Ssentinels to 'NA'; Trim to 5 digits; Keep valid Oregon ZIPs (97xxx) |
+| **DEVICE_GEO_ZIP**  | Sentinel codes (-999), non-digit chars, wrong length  | Validity / Accuracy        | Sentinels to 'NA'; Trim to 5 digits; Keep valid Oregon ZIP's (97xxx) |
 | **RESPONSE_TIME** | Prefix and possible trailing non-digit characters; not numeric     | Validity       | Remove prefix; strip non-digit endings; convert to numeric; no invalid to convert to NA  |
-
+| **TIMESTAMP** | Inconsistent Time/Date Variable Format; Some missing dates | Validity | Parse using `parse_dat_time()` with multiple formats; Invalid rows (NA dates) set to "NA" |
 | DEVICE_GEO_LAT | NONE: All values verified to be within plausible Oregon range | Validity, Accuracy | Copied into DEVICE_GEO_LAT_clean as-is |
 | DEVICE_GEO_LONG | 100 values outside Oregon plausible range | Validity, Accuracy | Shifted 100 values by 10 degrees (justifications above) |
-
-| TIMESTAMP | *Not Time/Date Variable Format* | *Validity* | *Parse characters for POSIXtc formats* |
-| Other variable(s) | *(optional)* | *(optional)* | *(optional)* |
-
 
 ## Reflection (5–8 sentences)
 
