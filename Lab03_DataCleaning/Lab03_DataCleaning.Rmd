@@ -1150,26 +1150,79 @@ Now pull everything together.
 >     -   Uses your cleaned variables (`PRICE_final`, `DEVICE_GEO_REGION_clean`, `DEVICE_GEO_ZIP_clean`, `RESPONSE_TIME_clean`, `TIMESTAMP_clean`, cleaned lat/long, etc.),
 >     -   Drops unnecessary intermediate columns (e.g., `_raw`, helper strings) that you don’t need for analysis.
 
-```{r}
-# Your code here
-
+Looking at the summary, we choose which variables to keep for the clean dataset and which still need a data type conversion to match the data dictionary:
+```{r clean-dataset-summary}
+# Look at the summary to decide which columns to keep
+summary(bids_nodup)
 ```
+
+We will keep the following:
+
+-   `TIMESTAMP_clean`          -> change name to `TIMESTAMP`
+-   `DATE_UTC`                 -> change to `DATE` type
+-   `AUCTION_ID`               -> direct copy
+-   `PUBLISHER_ID`             -> direct copy
+-   `DEVICE_TYPE`              -> direct copy
+-   `DEVICE_GEO_REGION_clean`  -> change name to `DEVICE_GEO_REGION`
+-   `DEVICE_GEO_CITY`          -> direct copy
+-   `DEVICE_GEO_ZIP_clean`     -> change name to `DEVICE_GEO_ZIP`
+-   `DEVICE_GEO_LAT_clean`     -> change name to `DEVICE_GEO_LAT`
+-   `DEVICE_GEO_LONG_clean`    -> change name to `DEVICE_GEO_LONG`
+-   `REQUESTED_SIZES`          -> direct copy
+-   `SIZE`                     -> direct copy
+-   `PRICE_final`              -> change name to `PRICE`
+-   `RESPONSE_TIME_clean`      -> change name to `RESPONSE_TIME`
+-   `BID_WON`                  -> change to `logical` type
+
+```{r clean-dataset-creation}
+bids_clean <- bids_nodup %>%
+  transmute(
+    # Time fields
+    TIMESTAMP = TIMESTAMP_clean,          
+    DATE      = as.Date(DATE_UTC),        # Convert to Date type
+    
+    # IDs / context
+    AUCTION_ID,
+    PUBLISHER_ID,
+    DEVICE_TYPE,
+    
+    # Location
+    DEVICE_GEO_REGION = DEVICE_GEO_REGION_clean,
+    DEVICE_GEO_CITY,
+    DEVICE_GEO_ZIP    = DEVICE_GEO_ZIP_clean,
+    DEVICE_GEO_LAT    = DEVICE_GEO_LAT_clean,
+    DEVICE_GEO_LONG   = DEVICE_GEO_LONG_clean,
+    
+    # Ad info
+    REQUESTED_SIZES,
+    SIZE,
+    
+    # Pricing & response
+    PRICE         = PRICE_final,          
+    RESPONSE_TIME = RESPONSE_TIME_clean,  
+    BID_WON       = BID_WON %in% c("TRUE", "true")  # Logical TRUE/FALSE
+  )
+```
+
 
 > 2.  Check the structure of `bids_clean` with `dplyr::glimpse()`.
 
-```{r}
-# Your code here
-
+```{r clean-dataset-glimpse}
+glimpse(bids_clean)
 ```
 
 > 3.  Optionally, write the cleaned dataset to disk (for your own future use) using something like `save()` (see `?save` for its use and an example) to save in `.RData` format **but do not commit the cleaned data file** to the remote repository.
 
-```{r}
-# Your code here (optional)
-
+```{r save-clean-data, eval=FALSE}
+# Save to data folder ignored by git
+write_parquet(bids_clea, "../data/lab_cleaned_bids_data.parquet")
 ```
 
 > 4.  In a short paragraph, describe what your final cleaned dataset now represents and what major issues have been addressed.
+
+The final cleaned dataset `bids_clean` represents a fully standardized and de-duplicated version of the original bid logs. 
+All major data quality issues have been addressed: prices were converted to positive numeric or NA values, invalid or inconsistent ZIP codes were normalized, region labels were cleaned, response times were parsed into numeric values, timestamps were converted into a unified POSIXct format, and erroneous longitudinal values were corrected based on ZIP/city and auction-level evidence. 
+Full-row duplicates were removed, and only meaningful variables were retained, with clean versions replacing raw fields. As a result `bids_clean` is an analysis-ready dataset containing valid, consistent, and interpretable fields aligned with the expected structure of the Oregon bid data.
 
 # Data Cleaning Log & Reflection (10–15 minutes)
 
@@ -1217,7 +1270,7 @@ Cleaning this dataset was more time-consuming than I expected, especially the st
 
 **Esther:**
 
-  - The most time-consuming data cleaning task by far was converting everyone's work into one cohesive flow which did not override others' previous work and ensuring a logical flow with justifications of actions & decisions.
-  - These all proved to be useful at various points in the cleanup.
-  - I would definitely find a way to have the team work sequentially with shorter deadlines for each section. This process of splitting the work and one person compiling into a single documents proved much more work than expected and more work than a single person doing the entire lab by themselves. As far as a general messy dataset, a strong initial plan of action along with sequential, organized workflow with full justifications of each decision is imperative.
-  - I attempted to use generative AI to help streamline the consolidation process and check for any code chunks which override the work of previous teammates' code chunks. However, I immediately saw issues and could not trust this would not introduce more errors. It proved to be more work than just working through the document myself, as I would still to perform these checks myself anyway to ensure the AI had not misled me.
+  - The most time-consuming data cleaning task by far was converting all team member's work into a single, cohesive workflow without overwriting others' previous work. Ensuring that each section aligned logically with previous steps and that all decisions were justified required careful review and took significantly more time than expected.
+  - A wide range of functions were useful at different points, including `mutate()`, `transmute()`, `case_when()`, `str_*()` for string cleaning, `parse_date_time()` for timestamps, and `distinct()` for identifying duplicate rows.
+  - Next time I receive a messy dataset, I would structure the team process differently by prioritizing a sequential workflow with shorter checkpoints and clearer integration steps. Splitting the work and later merging it into one document turned out to be far more work than expected and ultimately more time-consuming than doing the entire cleaning pipeline individually. For general messy datasets, creating a strong initial plan with fully justified, ordered decisions is essential.
+  - I attempted to use generative AI to help streamline consolidation and to check whether any code inadvertently overrode earlier work. However, I quickly noticed issues and could not fully trust the output without manually verifying everything myself. I therefore abandoned this idea as the AI did not meaningfully reduce the workload, since the risk of subtle errors required me to perform full manual validation anyway.
