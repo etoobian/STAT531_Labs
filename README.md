@@ -16,6 +16,13 @@ All data must be stored **locally** by team members following the structure desc
 ```
 README.md                       # Current document
 
+data/
+│
+├── bids_data_vDTR.parquet      # Project data .parquet file
+│
+└── data_dictionary.md          # Data dictionary for project data
+
+
 Lab01_Collab/
 │
 ├── images/                      
@@ -95,30 +102,6 @@ Lab03_DataCleaning/
 │
 └── Lab01_DataCleaning.html
 
-
-│
-├── scripts/
-│   ├── data_io.R                     # Data loading/export utilities
-│   └── ...                           # (future scripts here)
-│
-├── notebooks/
-│   └── ...                           # Rmd files for EDA / analysis
-│
-├── results/
-│   └── ...                           # Figures, tables, summaries
-│
-├── reports/
-│   └── ...                           # Final written deliverables
-│
-└── README.md 
-
-
-
-data/
-│
-├── bids_data_vDTR.parquet      # Project data .parquet file
-│
-└── data_dictionary.md          # Data dictionary for project data
 
 TeamDocuments/
 │
