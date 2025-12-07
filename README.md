@@ -16,13 +16,6 @@ All data must be stored **locally** by team members following the structure desc
 ```
 README.md                       # Current document
 
-data/
-│
-├── bids_data_vDTR.parquet      # Project data .parquet file
-│
-└── data_dictionary.md          # Data dictionary for project data
-
-
 Lab01_Collab/
 │
 ├── images/                      
@@ -72,6 +65,12 @@ Instead, create a local directory. Rather than use our project's `data_io.R` scr
 
 ```
 README.md                       # Current document
+
+data/
+│
+├── bids_data_vDTR.parquet      # Project data .parquet file
+│
+└── data_dictionary.md          # Data dictionary for project data
 
 Lab01_Collab/
 │
